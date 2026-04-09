@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - bikekeeper-net
+
+  postgres:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bikekeeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bikekeeper-net
+
+networks:
+  bikekeeper-net:
+    driver: bridge
+
+volumes:
+  pgdata:
