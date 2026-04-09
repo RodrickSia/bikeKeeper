@@ -5,243 +5,271 @@ import (
 	"testing"
 
 	"github.com/RodrickSia/bikeKeeper/internal/card"
-	"github.com/RodrickSia/bikeKeeper/internal/member"
-	"github.com/RodrickSia/bikeKeeper/tests/testutil"
 )
 
-func setupCardService(t *testing.T) (*card.Service, *member.Service, func()) {
-	t.Helper()
-	db := testutil.SetupTestDB(t)
-	cardRepo := card.NewRepository(db)
-	cardSvc := card.NewService(cardRepo)
-	memberRepo := member.NewRepository(db)
-	memberSvc := member.NewService(memberRepo)
-	cleanup := func() {
-		testutil.CleanTables(t, db, "cards", "members")
-	}
-	cleanup()
-	return cardSvc, memberSvc, cleanup
-}
+// --- Create ---
 
-func createTestMember(t *testing.T, memberSvc *member.Service, studentID string) *member.Member {
-	t.Helper()
-	m, err := memberSvc.Create(context.Background(), member.CreateParams{
-		StudentID: studentID,
-		FullName:  "Test Member " + studentID,
-	})
-	if err != nil {
-		t.Fatalf("failed to create test member: %v", err)
-	}
-	return m
-}
-
-func TestCardCreate(t *testing.T) {
-	cardSvc, memberSvc, cleanup := setupCardService(t)
+func TestCardCreate_Monthly(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	m := createTestMember(t, memberSvc, "99001")
-
-	c, err := cardSvc.Create(ctx, card.CreateParams{
-		CardUID:  "NFC-001",
+	// New monthly card linked to MemberA
+	c, err := cardSvc.Create(context.Background(), card.CreateParams{
+		CardUID:  "NFC-NEW-MONTHLY",
 		CardType: "monthly",
-		MemberID: &m.ID,
+		MemberID: &f.MemberA.ID,
 	})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if c.CardUID != "NFC-001" {
-		t.Errorf("expected CardUID 'NFC-001', got '%s'", c.CardUID)
+	if c.CardUID != "NFC-NEW-MONTHLY" {
+		t.Errorf("CardUID: got %q, want %q", c.CardUID, "NFC-NEW-MONTHLY")
 	}
 	if c.CardType != "monthly" {
-		t.Errorf("expected CardType 'monthly', got '%s'", c.CardType)
+		t.Errorf("CardType: got %q, want %q", c.CardType, "monthly")
 	}
 	if c.Status != "active" {
-		t.Errorf("expected Status 'active', got '%s'", c.Status)
+		t.Errorf("Status: got %q, want %q", c.Status, "active")
 	}
 	if c.IsInside {
-		t.Error("expected IsInside false on creation")
+		t.Error("expected IsInside=false on creation")
+	}
+	if c.MemberID == nil || *c.MemberID != f.MemberA.ID {
+		t.Errorf("MemberID: got %v, want %q", c.MemberID, f.MemberA.ID)
 	}
 }
 
 func TestCardCreate_Casual(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, cleanup := setup(t)
 	defer cleanup()
 
 	c, err := cardSvc.Create(context.Background(), card.CreateParams{
-		CardUID:  "NFC-CASUAL-001",
+		CardUID:  "NFC-CASUAL-NEW",
 		CardType: "casual",
 	})
 	if err != nil {
-		t.Fatalf("Create casual failed: %v", err)
+		t.Fatalf("Create failed: %v", err)
 	}
 	if c.MemberID != nil {
-		t.Error("expected nil MemberID for casual card")
+		t.Errorf("expected MemberID nil for casual card, got %q", *c.MemberID)
 	}
 }
 
 func TestCardCreate_InvalidType(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := cardSvc.Create(context.Background(), card.CreateParams{
-		CardUID:  "NFC-BAD",
-		CardType: "invalid",
+		CardUID:  "NFC-INVALID",
+		CardType: "vip",
 	})
 	if err == nil {
 		t.Error("expected error for invalid card type, got nil")
 	}
 }
 
+// --- Read ---
+
 func TestCardGetByUID(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-GET-001", CardType: "casual"})
-
-	got, err := cardSvc.GetByUID(ctx, "NFC-GET-001")
+	// CardActive: NFC-MONTHLY-001, monthly, MemberA, active
+	got, err := cardSvc.GetByUID(context.Background(), f.CardActive.CardUID)
 	if err != nil {
 		t.Fatalf("GetByUID failed: %v", err)
 	}
-	if got.CardUID != "NFC-GET-001" {
-		t.Errorf("expected 'NFC-GET-001', got '%s'", got.CardUID)
+	if got.CardUID != "NFC-MONTHLY-001" {
+		t.Errorf("CardUID: got %q, want %q", got.CardUID, "NFC-MONTHLY-001")
+	}
+	if got.CardType != "monthly" {
+		t.Errorf("CardType: got %q, want %q", got.CardType, "monthly")
+	}
+	if got.Status != "active" {
+		t.Errorf("Status: got %q, want %q", got.Status, "active")
+	}
+	if got.MemberID == nil || *got.MemberID != f.MemberA.ID {
+		t.Errorf("MemberID: got %v, want %q", got.MemberID, f.MemberA.ID)
+	}
+}
+
+func TestCardGetByUID_Blocked(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	defer cleanup()
+
+	// CardBlocked: NFC-MONTHLY-002, monthly, MemberB, blocked
+	got, err := cardSvc.GetByUID(context.Background(), f.CardBlocked.CardUID)
+	if err != nil {
+		t.Fatalf("GetByUID failed: %v", err)
+	}
+	if got.Status != "blocked" {
+		t.Errorf("Status: got %q, want %q", got.Status, "blocked")
 	}
 }
 
 func TestCardGetByUID_NotFound(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, cleanup := setup(t)
 	defer cleanup()
 
-	_, err := cardSvc.GetByUID(context.Background(), "NONEXISTENT")
+	_, err := cardSvc.GetByUID(context.Background(), "NONEXISTENT-CARD")
 	if err == nil {
 		t.Error("expected error for non-existent card, got nil")
 	}
 }
 
 func TestCardListByMember(t *testing.T) {
-	cardSvc, memberSvc, cleanup := setupCardService(t)
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	m := createTestMember(t, memberSvc, "99002")
-
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-M1", CardType: "monthly", MemberID: &m.ID})
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-M2", CardType: "monthly", MemberID: &m.ID})
-
-	cards, err := cardSvc.ListByMember(ctx, m.ID)
+	// MemberA owns only CardActive (NFC-MONTHLY-001)
+	cards, err := cardSvc.ListByMember(context.Background(), f.MemberA.ID)
 	if err != nil {
 		t.Fatalf("ListByMember failed: %v", err)
 	}
-	if len(cards) != 2 {
-		t.Errorf("expected 2 cards, got %d", len(cards))
+	if len(cards) != 1 {
+		t.Errorf("expected 1 card for MemberA, got %d", len(cards))
+	}
+	if cards[0].CardUID != f.CardActive.CardUID {
+		t.Errorf("CardUID: got %q, want %q", cards[0].CardUID, f.CardActive.CardUID)
 	}
 }
 
-func TestCardUpdate(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+// --- Update ---
+
+func TestCardUpdate_Status(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-UPD", CardType: "casual"})
+	// Block CardCasual (currently active)
+	blocked := "blocked"
+	updated, err := cardSvc.Update(context.Background(), card.UpdateParams{
+		CardUID: f.CardCasual.CardUID,
+		Status:  &blocked,
+	})
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	if updated.Status != "blocked" {
+		t.Errorf("Status: got %q, want %q", updated.Status, "blocked")
+	}
+	if updated.CardType != "casual" {
+		t.Errorf("CardType: got %q, want %q (should be unchanged)", updated.CardType, "casual")
+	}
+}
 
-	newType := "monthly"
-	newStatus := "blocked"
-	updated, err := cardSvc.Update(ctx, card.UpdateParams{
-		CardUID:  "NFC-UPD",
-		CardType: &newType,
-		Status:   &newStatus,
+func TestCardUpdate_Type(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	defer cleanup()
+
+	// Upgrade CardCasual to monthly
+	monthly := "monthly"
+	updated, err := cardSvc.Update(context.Background(), card.UpdateParams{
+		CardUID:  f.CardCasual.CardUID,
+		CardType: &monthly,
 	})
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
 	}
 	if updated.CardType != "monthly" {
-		t.Errorf("expected CardType 'monthly', got '%s'", updated.CardType)
+		t.Errorf("CardType: got %q, want %q", updated.CardType, "monthly")
 	}
-	if updated.Status != "blocked" {
-		t.Errorf("expected Status 'blocked', got '%s'", updated.Status)
+	if updated.Status != "active" {
+		t.Errorf("Status: got %q, want %q (should be unchanged)", updated.Status, "active")
 	}
 }
 
 func TestCardUpdate_InvalidStatus(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-BAD-STATUS", CardType: "casual"})
-
-	badStatus := "expired"
-	_, err := cardSvc.Update(ctx, card.UpdateParams{
-		CardUID: "NFC-BAD-STATUS",
-		Status:  &badStatus,
+	bad := "expired"
+	_, err := cardSvc.Update(context.Background(), card.UpdateParams{
+		CardUID: f.CardCasual.CardUID,
+		Status:  &bad,
 	})
 	if err == nil {
-		t.Error("expected error for invalid status, got nil")
+		t.Error("expected error for invalid status 'expired', got nil")
 	}
 }
 
+// --- ToggleInside ---
+
 func TestCardToggleInside(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-TOGGLE", CardType: "casual"})
 
-	// toggle in
-	toggled, err := cardSvc.ToggleInside(ctx, "NFC-TOGGLE")
+	// CardActive starts as IsInside=false
+	toggled, err := cardSvc.ToggleInside(ctx, f.CardActive.CardUID)
 	if err != nil {
 		t.Fatalf("first ToggleInside failed: %v", err)
 	}
 	if !toggled.IsInside {
-		t.Error("expected IsInside true after first toggle")
+		t.Error("expected IsInside=true after first toggle")
 	}
 
-	// toggle out
-	toggled, err = cardSvc.ToggleInside(ctx, "NFC-TOGGLE")
+	toggled, err = cardSvc.ToggleInside(ctx, f.CardActive.CardUID)
 	if err != nil {
 		t.Fatalf("second ToggleInside failed: %v", err)
 	}
 	if toggled.IsInside {
-		t.Error("expected IsInside false after second toggle")
+		t.Error("expected IsInside=false after second toggle")
 	}
 }
 
 func TestCardToggleInside_BlockedCard(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-BLOCKED", CardType: "casual"})
-
-	blocked := "blocked"
-	cardSvc.Update(ctx, card.UpdateParams{CardUID: "NFC-BLOCKED", Status: &blocked})
-
-	_, err := cardSvc.ToggleInside(ctx, "NFC-BLOCKED")
+	// CardBlocked has status "blocked" — toggle must be rejected
+	_, err := cardSvc.ToggleInside(context.Background(), f.CardBlocked.CardUID)
 	if err == nil {
 		t.Error("expected error when toggling blocked card, got nil")
 	}
 }
 
-func TestCardDelete(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+func TestCardToggleInside_LostCard(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	ctx := context.Background()
-	cardSvc.Create(ctx, card.CreateParams{CardUID: "NFC-DEL", CardType: "casual"})
+	// CardLost has status "lost" — toggle must be rejected
+	_, err := cardSvc.ToggleInside(context.Background(), f.CardLost.CardUID)
+	if err == nil {
+		t.Error("expected error when toggling lost card, got nil")
+	}
+}
 
-	err := cardSvc.Delete(ctx, "NFC-DEL")
+// --- Delete ---
+
+func TestCardDelete(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	defer cleanup()
+
+	// CardBlocked has no sessions — safe to delete
+	err := cardSvc.Delete(context.Background(), f.CardBlocked.CardUID)
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
-
-	_, err = cardSvc.GetByUID(ctx, "NFC-DEL")
+	_, err = cardSvc.GetByUID(context.Background(), f.CardBlocked.CardUID)
 	if err == nil {
 		t.Error("expected error after delete, got nil")
 	}
 }
 
+func TestCardDelete_WithSessions(t *testing.T) {
+	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	defer cleanup()
+
+	// CardActive has a completed session — ON DELETE RESTRICT prevents deletion
+	err := cardSvc.Delete(context.Background(), f.CardActive.CardUID)
+	if err == nil {
+		t.Error("expected error when deleting card that has sessions, got nil")
+	}
+}
+
 func TestCardDelete_NotFound(t *testing.T) {
-	cardSvc, _, cleanup := setupCardService(t)
+	_, cardSvc, _, cleanup := setup(t)
 	defer cleanup()
 
 	err := cardSvc.Delete(context.Background(), "NONEXISTENT")
@@ -249,3 +277,4 @@ func TestCardDelete_NotFound(t *testing.T) {
 		t.Error("expected error for non-existent card, got nil")
 	}
 }
+
