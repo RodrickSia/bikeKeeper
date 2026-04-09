@@ -67,3 +67,15 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 	}
 	return nil
 }
+
+func (s *Service) GetByID(ctx context.Context, id int64) (*ParkingSession, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *Service) ListByCard(ctx context.Context, cardUID string) ([]*ParkingSession, error) {
+	return s.repo.ListByCard(ctx, cardUID)
+}
+
+func (s *Service) Delete(ctx context.Context, id int64) error {
+	return s.repo.Delete(ctx, id)
+}

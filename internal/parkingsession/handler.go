@@ -91,7 +91,7 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.svc.repo.GetByID(r.Context(), id)
+	session, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
@@ -107,7 +107,7 @@ func (h *Handler) listByCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessions, err := h.svc.repo.ListByCard(r.Context(), cardUID)
+	sessions, err := h.svc.ListByCard(r.Context(), cardUID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list sessions")
 		return
@@ -122,7 +122,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.repo.Delete(r.Context(), id); err != nil {
+	if err := h.svc.Delete(r.Context(), id); err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}

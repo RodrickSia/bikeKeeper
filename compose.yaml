@@ -27,6 +27,33 @@ services:
     networks:
       - bikekeeper-net
 
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      - TEST_DATABASE_URL=postgres://bikekeeper:bikekeeper@postgres-test:5432/bikekeeper_test?sslmode=disable
+      - DATABASE_URL=postgres://bikekeeper:bikekeeper@postgres-test:5432/bikekeeper_test?sslmode=disable
+    networks:
+      - bikekeeper-net
+
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=bikekeeper
+      - POSTGRES_PASSWORD=bikekeeper
+      - POSTGRES_DB=bikekeeper_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bikekeeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bikekeeper-net
+
 networks:
   bikekeeper-net:
     driver: bridge
