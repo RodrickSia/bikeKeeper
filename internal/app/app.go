@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
+	"github.com/RodrickSia/bikeKeeper/internal/card"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
 )
 
@@ -31,4 +32,10 @@ func (a *App) registerRoutes(prefix string) {
 	sessionSvc := parkingsession.NewService(sessionRepo)
 	sessionHandler := parkingsession.NewHandler(sessionSvc)
 	parkingsession.RegisterRoutes(a.Router, sessionHandler, prefix)
+
+	// cards
+	cardRepo := card.NewRepository(a.DB)
+	cardSvc := card.NewService(cardRepo)
+	cardHandler := card.NewHandler(cardSvc)
+	card.RegisterRoutes(a.Router, cardHandler, prefix)
 }
