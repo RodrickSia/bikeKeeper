@@ -23,7 +23,7 @@ func main() {
 		return
 	}
 	application := app.New(db, prefix)
-
+	
 	log.Println("Initiating Server")
 	server := http.Server{
 		Addr:    ":8080",

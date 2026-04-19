@@ -2,10 +2,9 @@ package parkingsession
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
-
-	"github.com/shopspring/decimal"
 )
 
 type Handler struct {
@@ -18,26 +17,33 @@ func NewHandler(svc *Service) *Handler {
 
 // POST /sessions/checkin
 func (h *Handler) checkIn(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		CardUID         string  `json:"cardUid"`
-		PlateIn         *string `json:"plateIn"`
-		ImgPlateInPath  *string `json:"imgPlateInPath"`
-		ImgPersonInPath *string `json:"imgPersonInPath"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid multipart form")
 		return
 	}
-	if body.CardUID == "" {
+
+	cardUID := r.FormValue("cardUid")
+	if cardUID == "" {
 		writeError(w, http.StatusBadRequest, "cardUid is required")
 		return
 	}
 
+	imgPlateIn, err := readFormFile(r, "imgPlateIn")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read imgPlateIn")
+		return
+	}
+
+	imgPersonIn, err := readFormFile(r, "imgPersonIn")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read imgPersonIn")
+		return
+	}
+
 	session, err := h.svc.CheckIn(r.Context(), CheckInParams{
-		CardUID:         body.CardUID,
-		PlateIn:         body.PlateIn,
-		ImgPlateInPath:  body.ImgPlateInPath,
-		ImgPersonInPath: body.ImgPersonInPath,
+		CardUID:     cardUID,
+		ImgPlateIn:  imgPlateIn,
+		ImgPersonIn: imgPersonIn,
 	})
 	if err != nil {
 		writeError(w, http.StatusConflict, err.Error())
@@ -53,30 +59,26 @@ func (h *Handler) checkOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		PlateOut         *string `json:"plateOut"`
-		ImgPlateOutPath  *string `json:"imgPlateOutPath"`
-		ImgPersonOutPath *string `json:"imgPersonOutPath"`
-		Cost             string  `json:"cost"`
-		IsWarning        bool    `json:"isWarning"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid multipart form")
 		return
 	}
 
-	cost, err := decimal.NewFromString(body.Cost)
+	imgPlateOut, err := readFormFile(r, "imgPlateOut")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid cost value")
+		writeError(w, http.StatusBadRequest, "failed to read imgPlateOut")
+		return
+	}
+
+	imgPersonOut, err := readFormFile(r, "imgPersonOut")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read imgPersonOut")
 		return
 	}
 
 	if err := h.svc.CheckOut(r.Context(), id, CheckOutParams{
-		PlateOut:         body.PlateOut,
-		ImgPlateOutPath:  body.ImgPlateOutPath,
-		ImgPersonOutPath: body.ImgPersonOutPath,
-		Cost:             cost,
-		IsWarning:        body.IsWarning,
+		ImgPlateOut:  imgPlateOut,
+		ImgPersonOut: imgPersonOut,
 	}); err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -146,6 +148,15 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
+}
+
+func readFormFile(r *http.Request, field string) ([]byte, error) {
+	file, _, err := r.FormFile(field)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return io.ReadAll(file)
 }
 
 

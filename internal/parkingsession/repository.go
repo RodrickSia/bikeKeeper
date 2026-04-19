@@ -16,7 +16,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id int64) (*ParkingSession, error)
 	GetOngoingSessionByCard(ctx context.Context, cardUID string) (*ParkingSession, error)
 	ListByCard(ctx context.Context, cardUID string) ([]*ParkingSession, error)
-	CheckOut(ctx context.Context, id int64, params CheckOutParams) error
+	CheckOut(ctx context.Context, id int64, session *ParkingSession) error
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -41,7 +41,7 @@ func (r *repository) GetOngoingSessionByCard(ctx context.Context, cardUID string
 	const query = `
 		SELECT id, card_uid, plate_in, img_plate_in_path, img_person_in_path,
 		       check_in_time, plate_out, img_plate_out_path, img_person_out_path,
-		       check_out_time, cost, is_warning, status
+		       check_out_time, status
 		FROM parking_sessions
 		WHERE card_uid = $1 AND status = 'ongoing'
 		LIMIT 1`
@@ -50,7 +50,7 @@ func (r *repository) GetOngoingSessionByCard(ctx context.Context, cardUID string
 	err := r.db.QueryRowContext(ctx, query, cardUID).Scan(
 		&session.ID, &session.CardUID, &session.PlateIn, &session.ImgPlateInPath, &session.ImgPersonInPath,
 		&session.CheckInTime, &session.PlateOut, &session.ImgPlateOutPath, &session.ImgPersonOutPath,
-		&session.CheckOutTime, &session.Cost, &session.IsWarning, &session.Status,
+		&session.CheckOutTime, &session.Status,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -62,7 +62,7 @@ func (r *repository) GetByID(ctx context.Context, id int64) (*ParkingSession, er
 	const query = `
 		SELECT id, card_uid, plate_in, img_plate_in_path, img_person_in_path,
 		       check_in_time, plate_out, img_plate_out_path, img_person_out_path,
-		       check_out_time, cost, is_warning, status
+		       check_out_time, status
 		FROM parking_sessions
 		WHERE id = $1`
 
@@ -70,7 +70,7 @@ func (r *repository) GetByID(ctx context.Context, id int64) (*ParkingSession, er
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&session.ID, &session.CardUID, &session.PlateIn, &session.ImgPlateInPath, &session.ImgPersonInPath,
 		&session.CheckInTime, &session.PlateOut, &session.ImgPlateOutPath, &session.ImgPersonOutPath,
-		&session.CheckOutTime, &session.Cost, &session.IsWarning, &session.Status,
+		&session.CheckOutTime, &session.Status,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("parking session %d not found", id)
@@ -82,7 +82,7 @@ func (r *repository) ListByCard(ctx context.Context, cardUID string) ([]*Parking
 	const query = `
 		SELECT id, card_uid, plate_in, img_plate_in_path, img_person_in_path,
 		       check_in_time, plate_out, img_plate_out_path, img_person_out_path,
-		       check_out_time, cost, is_warning, status
+		       check_out_time, status
 		FROM parking_sessions
 		WHERE card_uid = $1
 		ORDER BY check_in_time DESC`
@@ -99,7 +99,7 @@ func (r *repository) ListByCard(ctx context.Context, cardUID string) ([]*Parking
 		if err := rows.Scan(
 			&session.ID, &session.CardUID, &session.PlateIn, &session.ImgPlateInPath, &session.ImgPersonInPath,
 			&session.CheckInTime, &session.PlateOut, &session.ImgPlateOutPath, &session.ImgPersonOutPath,
-			&session.CheckOutTime, &session.Cost, &session.IsWarning, &session.Status,
+			&session.CheckOutTime, &session.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func (r *repository) ListByCard(ctx context.Context, cardUID string) ([]*Parking
 	return sessions, rows.Err()
 }
 
-func (r *repository) CheckOut(ctx context.Context, id int64, params CheckOutParams) error {
+func (r *repository) CheckOut(ctx context.Context, id int64, session *ParkingSession) error {
 	const query = `
 		UPDATE parking_sessions
 		SET
@@ -116,14 +116,12 @@ func (r *repository) CheckOut(ctx context.Context, id int64, params CheckOutPara
 			img_plate_out_path  = $2,
 			img_person_out_path = $3,
 			check_out_time      = $4,
-			cost                = $5,
-			is_warning          = $6,
 			status              = 'completed'
-		WHERE id = $7 AND status = 'ongoing'`
+		WHERE id = $5 AND status = 'ongoing'`
 
 	result, err := r.db.ExecContext(ctx, query,
-		params.PlateOut, params.ImgPlateOutPath, params.ImgPersonOutPath, time.Now(),
-		params.Cost, params.IsWarning, id,
+		session.PlateOut, session.ImgPlateOutPath, session.ImgPersonOutPath, time.Now(),
+		id,
 	)
 	if err != nil {
 		return err

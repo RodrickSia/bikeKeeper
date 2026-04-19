@@ -3,31 +3,27 @@ package parkingsession
 import (
 	"context"
 	"fmt"
-
-	"github.com/shopspring/decimal"
 )
 
 type Service struct {
-	repo Repository
+	repo            Repository
+	plateProccessor OCRService
+	imageStore      ImageStore
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, plateProccessor OCRService, imageStore ImageStore) *Service {
+	return &Service{repo: repo, plateProccessor: plateProccessor, imageStore: imageStore}
 }
 
 type CheckInParams struct {
-	CardUID         string
-	PlateIn         *string
-	ImgPlateInPath  *string
-	ImgPersonInPath *string
+	CardUID     string
+	ImgPlateIn  []byte
+	ImgPersonIn []byte
 }
 
 type CheckOutParams struct {
-	PlateOut         *string
-	ImgPlateOutPath  *string
-	ImgPersonOutPath *string
-	Cost             decimal.Decimal
-	IsWarning        bool
+	ImgPlateOut  []byte
+	ImgPersonOut []byte
 }
 
 func (s *Service) CheckIn(ctx context.Context, params CheckInParams) (*ParkingSession, error) {
@@ -38,12 +34,25 @@ func (s *Service) CheckIn(ctx context.Context, params CheckInParams) (*ParkingSe
 	if ongoing != nil {
 		return nil, fmt.Errorf("card %s already has an ongoing session (id: %d)", params.CardUID, ongoing.ID)
 	}
-
+	//  Save the two images using the image storage service and get the paths
+	ImgPlateInPath, err := s.imageStore.SaveImage(ctx, params.ImgPlateIn)
+	if err != nil {
+		return nil, fmt.Errorf("saving plate in image: %w", err)
+	}
+	ImgPersonInPath, err := s.imageStore.SaveImage(ctx, params.ImgPersonIn)
+	if err != nil {
+		return nil, fmt.Errorf("saving person in image: %w", err)
+	}
+	//  Get the plate number from the plate image using the OCR service
+	plateIn, err := s.plateProccessor.ExtractPlate(ctx, params.ImgPlateIn)
+	if err != nil {
+		return nil, fmt.Errorf("recognizing plate: %w", err)
+	}
 	session := &ParkingSession{
 		CardUID:         params.CardUID,
-		PlateIn:         params.PlateIn,
-		ImgPlateInPath:  params.ImgPlateInPath,
-		ImgPersonInPath: params.ImgPersonInPath,
+		PlateIn:         &plateIn,
+		ImgPlateInPath:  &ImgPlateInPath,
+		ImgPersonInPath: &ImgPersonInPath,
 		Status:          "ongoing",
 	}
 
@@ -62,7 +71,26 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 	if session.Status != "ongoing" {
 		return fmt.Errorf("session %d is already completed", id)
 	}
-	if err := s.repo.CheckOut(ctx, id, params); err != nil {
+
+	imgPlateOutPath, err := s.imageStore.SaveImage(ctx, params.ImgPlateOut)
+	if err != nil {
+		return fmt.Errorf("saving plate out image: %w", err)
+	}
+	imgPersonOutPath, err := s.imageStore.SaveImage(ctx, params.ImgPersonOut)
+	if err != nil {
+		return fmt.Errorf("saving person out image: %w", err)
+	}
+
+	plateOut, err := s.plateProccessor.ExtractPlate(ctx, params.ImgPlateOut)
+	if err != nil {
+		return fmt.Errorf("recognizing plate: %w", err)
+	}
+
+	session.PlateOut = &plateOut
+	session.ImgPlateOutPath = &imgPlateOutPath
+	session.ImgPersonOutPath = &imgPersonOutPath
+
+	if err := s.repo.CheckOut(ctx, id, session); err != nil {
 		return fmt.Errorf("checking out session: %w", err)
 	}
 	return nil

@@ -10,8 +10,6 @@ CREATE TABLE parking_sessions (
     img_plate_out_path  TEXT,
     img_person_out_path TEXT,
     check_out_time      TIMESTAMP,
-    cost                DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    is_warning          BOOLEAN      NOT NULL DEFAULT FALSE,
     status              VARCHAR(20)  NOT NULL DEFAULT 'ongoing' CHECK (status IN ('ongoing', 'completed'))
 );
 

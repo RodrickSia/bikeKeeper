@@ -3,9 +3,9 @@ module github.com/RodrickSia/bikeKeeper
 go 1.26.1
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/pressly/goose/v3 v3.27.0
-	github.com/shopspring/decimal v1.4.0
 )
 
 require (

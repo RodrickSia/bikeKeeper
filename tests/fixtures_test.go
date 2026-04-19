@@ -10,7 +10,6 @@ import (
 	"github.com/RodrickSia/bikeKeeper/internal/member"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
 	"github.com/RodrickSia/bikeKeeper/tests/testutil"
-	"github.com/shopspring/decimal"
 )
 
 // Fixtures holds all pre-seeded dummy data available to each test.
@@ -29,7 +28,7 @@ import (
 //	  CardCasual  — NFC-CASUAL-001,  casual,  no member, active (1 ongoing session)
 //
 //	Sessions
-//	  SessionCompleted — CardActive,  plate 59F1-12345, cost 5000, status completed
+//	  SessionCompleted — CardActive,  plate 59F1-12345, status completed
 //	  SessionOngoing   — CardCasual,  plate 51H-99999,  status ongoing
 type Fixtures struct {
 	MemberA *member.Member
@@ -78,7 +77,7 @@ func setupWithFixtures(t *testing.T) (*member.Service, *card.Service, *parkingse
 func buildServices(db *sql.DB) (*member.Service, *card.Service, *parkingsession.Service) {
 	memberSvc := member.NewService(member.NewRepository(db))
 	cardSvc := card.NewService(card.NewRepository(db))
-	sessionSvc := parkingsession.NewService(parkingsession.NewRepository(db))
+	sessionSvc := parkingsession.NewService(parkingsession.NewRepository(db), &testutil.MockOCRService{}, &testutil.MockImageStore{})
 	return memberSvc, cardSvc, sessionSvc
 }
 
@@ -170,19 +169,13 @@ func seedFixtures(
 	}
 
 	// --- Sessions ---
-	plateIn1 := "59F1-12345"
 	sessionCompleted, err := sessionSvc.CheckIn(ctx, parkingsession.CheckInParams{
 		CardUID: cardActive.CardUID,
-		PlateIn: &plateIn1,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("check-in sessionCompleted: %w", err)
 	}
-	plateOut1 := "59F1-12345"
-	if err := sessionSvc.CheckOut(ctx, sessionCompleted.ID, parkingsession.CheckOutParams{
-		PlateOut: &plateOut1,
-		Cost:     decimal.NewFromInt(5000),
-	}); err != nil {
+	if err := sessionSvc.CheckOut(ctx, sessionCompleted.ID, parkingsession.CheckOutParams{}); err != nil {
 		return nil, fmt.Errorf("check-out sessionCompleted: %w", err)
 	}
 	sessionCompleted, err = sessionSvc.GetByID(ctx, sessionCompleted.ID)
@@ -190,10 +183,8 @@ func seedFixtures(
 		return nil, fmt.Errorf("re-fetch sessionCompleted: %w", err)
 	}
 
-	plateIn2 := "51H-99999"
 	sessionOngoing, err := sessionSvc.CheckIn(ctx, parkingsession.CheckInParams{
 		CardUID: cardCasual.CardUID,
-		PlateIn: &plateIn2,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("check-in sessionOngoing: %w", err)

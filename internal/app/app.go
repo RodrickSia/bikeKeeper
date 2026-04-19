@@ -7,6 +7,8 @@ import (
 	"github.com/RodrickSia/bikeKeeper/internal/card"
 	"github.com/RodrickSia/bikeKeeper/internal/member"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
+	"github.com/RodrickSia/bikeKeeper/pkg/OCR"
+	"github.com/RodrickSia/bikeKeeper/pkg/storage"
 )
 
 type App struct {
@@ -30,7 +32,9 @@ func New(db *sql.DB, prefix string) *App {
 func (a *App) registerRoutes(prefix string) {
 	// parking sessions
 	sessionRepo := parkingsession.NewRepository(a.DB)
-	sessionSvc := parkingsession.NewService(sessionRepo)
+	imageStore := storage.NewLocalStorage("./images")
+	plateProcessor := OCR.NewPlateProcessor()
+	sessionSvc := parkingsession.NewService(sessionRepo, plateProcessor, imageStore)
 	sessionHandler := parkingsession.NewHandler(sessionSvc)
 	parkingsession.RegisterRoutes(a.Router, sessionHandler, prefix)
 
