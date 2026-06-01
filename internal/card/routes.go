@@ -2,11 +2,19 @@ package card
 
 import "net/http"
 
-func RegisterRoutes(mux *http.ServeMux, h *Handler, prefix string) {
-	mux.HandleFunc("POST "+prefix+"/cards", h.create)
-	mux.HandleFunc("GET "+prefix+"/cards/{cardUID}", h.getByUID)
-	mux.HandleFunc("GET "+prefix+"/cards/member/{memberID}", h.listByMember)
-	mux.HandleFunc("PUT "+prefix+"/cards/{cardUID}", h.update)
-	mux.HandleFunc("POST "+prefix+"/cards/{cardUID}/toggle", h.toggleInside)
-	mux.HandleFunc("DELETE "+prefix+"/cards/{cardUID}", h.delete)
+func RegisterRoutes(mux *http.ServeMux, h *Handler, prefix string, mw ...func(http.Handler) http.Handler) {
+	wrap := func(hf http.HandlerFunc) http.Handler {
+		var handler http.Handler = hf
+		for i := len(mw) - 1; i >= 0; i-- {
+			handler = mw[i](handler)
+		}
+		return handler
+	}
+
+	mux.Handle("POST "+prefix+"/cards", wrap(h.create))
+	mux.Handle("GET "+prefix+"/cards/{cardUID}", wrap(h.getByUID))
+	mux.Handle("GET "+prefix+"/cards/member/{memberID}", wrap(h.listByMember))
+	mux.Handle("PUT "+prefix+"/cards/{cardUID}", wrap(h.update))
+	mux.Handle("POST "+prefix+"/cards/{cardUID}/toggle", wrap(h.toggleInside))
+	mux.Handle("DELETE "+prefix+"/cards/{cardUID}", wrap(h.delete))
 }

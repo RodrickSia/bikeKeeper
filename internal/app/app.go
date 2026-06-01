@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"net/http"
 
+	"github.com/RodrickSia/bikeKeeper/internal/auth"
 	"github.com/RodrickSia/bikeKeeper/internal/card"
 	"github.com/RodrickSia/bikeKeeper/internal/member"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
+	"github.com/RodrickSia/bikeKeeper/internal/user"
 	"github.com/RodrickSia/bikeKeeper/pkg/OCR"
 	"github.com/RodrickSia/bikeKeeper/pkg/storage"
 )
@@ -28,25 +30,41 @@ func New(db *sql.DB, prefix string) *App {
 	return a
 }
 
-// This bind the registreRoutes to the app struct
 func (a *App) registerRoutes(prefix string) {
-	// parking sessions
+	// auth + users (shared repo)
+	userRepo := user.NewRepository(a.DB)
+	authAdapter := user.NewAuthAdapter(userRepo)
+	authSvc := auth.NewService(authAdapter)
+	authHandler := auth.NewHandler(authSvc)
+	auth.RegisterRoutes(a.Router, authHandler, prefix)
+
+	// middleware chains
+	authenticated := auth.Authenticate(authSvc)
+	staffOnly := auth.RequireRole(user.RoleStaff, user.RoleFaculty, user.RoleAdmin)
+	facultyOnly := auth.RequireRole(user.RoleFaculty, user.RoleAdmin)
+
+	// users — faculty, admin
+	userSvc := user.NewService(userRepo)
+	userHandler := user.NewHandler(userSvc)
+	user.RegisterRoutes(a.Router, userHandler, prefix, authenticated, facultyOnly)
+
+	// parking sessions — staff, faculty, admin
 	sessionRepo := parkingsession.NewRepository(a.DB)
 	imageStore := storage.NewLocalStorage("./images")
 	plateProcessor := OCR.NewPlateProcessor()
 	sessionSvc := parkingsession.NewService(sessionRepo, plateProcessor, imageStore)
 	sessionHandler := parkingsession.NewHandler(sessionSvc)
-	parkingsession.RegisterRoutes(a.Router, sessionHandler, prefix)
+	parkingsession.RegisterRoutes(a.Router, sessionHandler, prefix, authenticated, staffOnly)
 
-	// members
+	// members — faculty, admin
 	memberRepo := member.NewRepository(a.DB)
 	memberSvc := member.NewService(memberRepo)
 	memberHandler := member.NewHandler(memberSvc)
-	member.RegisterRoutes(a.Router, memberHandler, prefix)
+	member.RegisterRoutes(a.Router, memberHandler, prefix, authenticated, facultyOnly)
 
-	// cards
+	// cards — faculty, admin
 	cardRepo := card.NewRepository(a.DB)
 	cardSvc := card.NewService(cardRepo)
 	cardHandler := card.NewHandler(cardSvc)
-	card.RegisterRoutes(a.Router, cardHandler, prefix)
+	card.RegisterRoutes(a.Router, cardHandler, prefix, authenticated, facultyOnly)
 }
