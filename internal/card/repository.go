@@ -24,24 +24,24 @@ func NewRepository(db *sql.DB) Repository {
 
 func (r *repository) Create(ctx context.Context, card *Card) error {
 	const query = `
-		INSERT INTO cards (card_uid, card_type, member_id, is_inside, status)
-		VALUES ($1, $2, $3, $4, $5)`
+		INSERT INTO cards (card_uid, card_type, member_id, is_inside, status, balance)
+		VALUES ($1, $2, $3, $4, $5, $6)`
 
 	_, err := r.db.ExecContext(ctx, query,
-		card.CardUID, card.CardType, card.MemberID, card.IsInside, card.Status,
+		card.CardUID, card.CardType, card.MemberID, card.IsInside, card.Status, card.Balance,
 	)
 	return err
 }
 
 func (r *repository) GetByUID(ctx context.Context, cardUID string) (*Card, error) {
 	const query = `
-		SELECT card_uid, card_type, member_id, is_inside, status
+		SELECT card_uid, card_type, member_id, is_inside, status, balance
 		FROM cards
 		WHERE card_uid = $1`
 
 	card := &Card{}
 	err := r.db.QueryRowContext(ctx, query, cardUID).Scan(
-		&card.CardUID, &card.CardType, &card.MemberID, &card.IsInside, &card.Status,
+		&card.CardUID, &card.CardType, &card.MemberID, &card.IsInside, &card.Status, &card.Balance,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("card %s not found", cardUID)
@@ -51,7 +51,7 @@ func (r *repository) GetByUID(ctx context.Context, cardUID string) (*Card, error
 
 func (r *repository) ListByMember(ctx context.Context, memberID string) ([]*Card, error) {
 	const query = `
-		SELECT card_uid, card_type, member_id, is_inside, status
+		SELECT card_uid, card_type, member_id, is_inside, status, balance
 		FROM cards
 		WHERE member_id = $1`
 
@@ -65,7 +65,7 @@ func (r *repository) ListByMember(ctx context.Context, memberID string) ([]*Card
 	for rows.Next() {
 		card := &Card{}
 		if err := rows.Scan(
-			&card.CardUID, &card.CardType, &card.MemberID, &card.IsInside, &card.Status,
+			&card.CardUID, &card.CardType, &card.MemberID, &card.IsInside, &card.Status, &card.Balance,
 		); err != nil {
 			return nil, err
 		}
@@ -77,11 +77,11 @@ func (r *repository) ListByMember(ctx context.Context, memberID string) ([]*Card
 func (r *repository) Update(ctx context.Context, card *Card) error {
 	const query = `
 		UPDATE cards
-		SET card_type = $1, member_id = $2, is_inside = $3, status = $4
-		WHERE card_uid = $5`
+		SET card_type = $1, member_id = $2, is_inside = $3, status = $4, balance = $5
+		WHERE card_uid = $6`
 
 	result, err := r.db.ExecContext(ctx, query,
-		card.CardType, card.MemberID, card.IsInside, card.Status, card.CardUID,
+		card.CardType, card.MemberID, card.IsInside, card.Status, card.Balance, card.CardUID,
 	)
 	if err != nil {
 		return err

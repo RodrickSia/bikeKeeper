@@ -24,4 +24,8 @@ type OCRService interface {
 	ExtractPlate(ctx context.Context, imageData []byte) (string, error)
 }
 
+type PaymentService interface {
+	ChargeParking(ctx context.Context, cardUID string, fee float64, sessionID int64) error
+}
+
 

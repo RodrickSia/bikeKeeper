@@ -9,10 +9,11 @@ type Service struct {
 	repo            Repository
 	plateProccessor OCRService
 	imageStore      ImageStore
+	payment         PaymentService
 }
 
-func NewService(repo Repository, plateProccessor OCRService, imageStore ImageStore) *Service {
-	return &Service{repo: repo, plateProccessor: plateProccessor, imageStore: imageStore}
+func NewService(repo Repository, plateProccessor OCRService, imageStore ImageStore, payment PaymentService) *Service {
+	return &Service{repo: repo, plateProccessor: plateProccessor, imageStore: imageStore, payment: payment}
 }
 
 type CheckInParams struct {
@@ -93,6 +94,14 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 	if err := s.repo.CheckOut(ctx, id, session); err != nil {
 		return fmt.Errorf("checking out session: %w", err)
 	}
+
+	const parkingFee = 5000.0
+	if s.payment != nil {
+		if err := s.payment.ChargeParking(ctx, session.CardUID, parkingFee, id); err != nil {
+			return fmt.Errorf("charging parking fee: %w", err)
+		}
+	}
+
 	return nil
 }
 

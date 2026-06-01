@@ -24,3 +24,10 @@ type MockOCRService struct{}
 func (m *MockOCRService) ExtractPlate(ctx context.Context, imageData []byte) (string, error) {
 	return "MOCK-PLATE", nil
 }
+
+// MockPaymentService implements parkingsession.PaymentService for tests.
+type MockPaymentService struct{}
+
+func (m *MockPaymentService) ChargeParking(ctx context.Context, cardUID string, fee float64, sessionID int64) error {
+	return nil
+}

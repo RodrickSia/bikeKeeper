@@ -10,6 +10,7 @@ import (
 	"github.com/RodrickSia/bikeKeeper/internal/card"
 	"github.com/RodrickSia/bikeKeeper/internal/member"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
+	"github.com/RodrickSia/bikeKeeper/internal/payment"
 	"github.com/RodrickSia/bikeKeeper/internal/user"
 	"github.com/RodrickSia/bikeKeeper/tests/testutil"
 )
@@ -55,25 +56,25 @@ type Fixtures struct {
 }
 
 // setup returns all three services wired to a clean, empty test DB.
-func setup(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, func()) {
+func setup(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, *payment.Service, func()) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
-	memberSvc, cardSvc, sessionSvc, userSvc, authSvc := buildServices(db)
+	memberSvc, cardSvc, sessionSvc, userSvc, authSvc, paymentSvc := buildServices(db)
 	cleanup := func() {
-		testutil.CleanTables(t, db, "parking_sessions", "cards", "members", "users")
+		testutil.CleanTables(t, db, "transactions", "parking_sessions", "cards", "members", "users")
 	}
 	cleanup()
-	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, cleanup
+	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, paymentSvc, cleanup
 }
 
 // setupWithFixtures seeds the full dummy dataset and returns services alongside
 // the Fixtures struct so tests can reference known values.
-func setupWithFixtures(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, *Fixtures, func()) {
+func setupWithFixtures(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, *payment.Service, *Fixtures, func()) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
-	memberSvc, cardSvc, sessionSvc, userSvc, authSvc := buildServices(db)
+	memberSvc, cardSvc, sessionSvc, userSvc, authSvc, paymentSvc := buildServices(db)
 	cleanup := func() {
-		testutil.CleanTables(t, db, "parking_sessions", "cards", "members", "users")
+		testutil.CleanTables(t, db, "transactions", "parking_sessions", "cards", "members", "users")
 	}
 	cleanup()
 
@@ -81,18 +82,19 @@ func setupWithFixtures(t *testing.T) (*member.Service, *card.Service, *parkingse
 	if err != nil {
 		t.Fatalf("seedFixtures: %v", err)
 	}
-	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, f, cleanup
+	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, paymentSvc, f, cleanup
 }
 
-func buildServices(db *sql.DB) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service) {
+func buildServices(db *sql.DB) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, *payment.Service) {
 	memberSvc := member.NewService(member.NewRepository(db))
 	cardSvc := card.NewService(card.NewRepository(db))
-	sessionSvc := parkingsession.NewService(parkingsession.NewRepository(db), &testutil.MockOCRService{}, &testutil.MockImageStore{})
+	paymentSvc := payment.NewService(payment.NewRepository(db))
+	sessionSvc := parkingsession.NewService(parkingsession.NewRepository(db), &testutil.MockOCRService{}, &testutil.MockImageStore{}, &testutil.MockPaymentService{})
 	userRepo := user.NewRepository(db)
 	userSvc := user.NewService(userRepo)
 	authAdapter := user.NewAuthAdapter(userRepo)
 	authSvc := auth.NewService(authAdapter)
-	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc
+	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, paymentSvc
 }
 
 func seedFixtures(

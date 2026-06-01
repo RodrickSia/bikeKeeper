@@ -6,4 +6,5 @@ type Card struct {
 	MemberID *string `json:"memberId"`
 	IsInside bool    `json:"isInside"`
 	Status   string  `json:"status"`
+	Balance  float64 `json:"balance"`
 }

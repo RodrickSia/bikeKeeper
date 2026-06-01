@@ -10,7 +10,7 @@ import (
 // --- Create ---
 
 func TestMemberCreate(t *testing.T) {
-	memberSvc, _, _, _, _, cleanup := setup(t)
+	memberSvc, _, _, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	phone := "0908888888"
@@ -37,7 +37,7 @@ func TestMemberCreate(t *testing.T) {
 }
 
 func TestMemberCreate_NoPhone(t *testing.T) {
-	memberSvc, _, _, _, _, cleanup := setup(t)
+	memberSvc, _, _, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	m, err := memberSvc.Create(context.Background(), member.CreateParams{
@@ -53,7 +53,7 @@ func TestMemberCreate_NoPhone(t *testing.T) {
 }
 
 func TestMemberCreate_DuplicateStudentID(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// MemberA (StudentID "24520001") already exists in the DB
@@ -69,7 +69,7 @@ func TestMemberCreate_DuplicateStudentID(t *testing.T) {
 // --- Read ---
 
 func TestMemberGetByID(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	got, err := memberSvc.GetByID(context.Background(), f.MemberA.ID)
@@ -88,7 +88,7 @@ func TestMemberGetByID(t *testing.T) {
 }
 
 func TestMemberGetByID_NotFound(t *testing.T) {
-	memberSvc, _, _, _, _, cleanup := setup(t)
+	memberSvc, _, _, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := memberSvc.GetByID(context.Background(), "00000000-0000-0000-0000-000000000000")
@@ -98,7 +98,7 @@ func TestMemberGetByID_NotFound(t *testing.T) {
 }
 
 func TestMemberGetByStudentID(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// MemberB has StudentID "24520002" and no phone
@@ -118,7 +118,7 @@ func TestMemberGetByStudentID(t *testing.T) {
 }
 
 func TestMemberGetByStudentID_NotFound(t *testing.T) {
-	memberSvc, _, _, _, _, cleanup := setup(t)
+	memberSvc, _, _, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := memberSvc.GetByStudentID(context.Background(), "00000000")
@@ -128,7 +128,7 @@ func TestMemberGetByStudentID_NotFound(t *testing.T) {
 }
 
 func TestMemberList(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	members, err := memberSvc.List(context.Background())
@@ -153,7 +153,7 @@ func TestMemberList(t *testing.T) {
 // --- Update ---
 
 func TestMemberUpdate_FullName(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// Update MemberC's full name; phone should remain unchanged
@@ -174,7 +174,7 @@ func TestMemberUpdate_FullName(t *testing.T) {
 }
 
 func TestMemberUpdate_AddPhone(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// MemberB initially has no phone — add one
@@ -197,7 +197,7 @@ func TestMemberUpdate_AddPhone(t *testing.T) {
 // --- Delete ---
 
 func TestMemberDelete(t *testing.T) {
-	memberSvc, _, _, _, _, f, cleanup := setupWithFixtures(t)
+	memberSvc, _, _, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// Deleting MemberA sets CardActive.member_id → NULL (ON DELETE SET NULL)
@@ -212,7 +212,7 @@ func TestMemberDelete(t *testing.T) {
 }
 
 func TestMemberDelete_NotFound(t *testing.T) {
-	memberSvc, _, _, _, _, cleanup := setup(t)
+	memberSvc, _, _, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	err := memberSvc.Delete(context.Background(), "00000000-0000-0000-0000-000000000000")

@@ -9,7 +9,7 @@ import (
 )
 
 func TestUserCreate(t *testing.T) {
-	_, _, _, userSvc, _, cleanup := setup(t)
+	_, _, _, userSvc, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	u, err := userSvc.Create(context.Background(), user.CreateParams{
@@ -35,7 +35,7 @@ func TestUserCreate(t *testing.T) {
 }
 
 func TestUserCreate_WithMember(t *testing.T) {
-	memberSvc, _, _, userSvc, _, cleanup := setup(t)
+	memberSvc, _, _, userSvc, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -59,7 +59,7 @@ func TestUserCreate_WithMember(t *testing.T) {
 }
 
 func TestUserCreate_InvalidRole(t *testing.T) {
-	_, _, _, userSvc, _, cleanup := setup(t)
+	_, _, _, userSvc, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := userSvc.Create(context.Background(), user.CreateParams{
@@ -73,7 +73,7 @@ func TestUserCreate_InvalidRole(t *testing.T) {
 }
 
 func TestUserCreate_DuplicateEmail(t *testing.T) {
-	_, _, _, userSvc, _, f, cleanup := setupWithFixtures(t)
+	_, _, _, userSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	_, err := userSvc.Create(context.Background(), user.CreateParams{
@@ -87,7 +87,7 @@ func TestUserCreate_DuplicateEmail(t *testing.T) {
 }
 
 func TestUserGetByID(t *testing.T) {
-	_, _, _, userSvc, _, f, cleanup := setupWithFixtures(t)
+	_, _, _, userSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	got, err := userSvc.GetByID(context.Background(), f.UserAdmin.ID)
@@ -103,7 +103,7 @@ func TestUserGetByID(t *testing.T) {
 }
 
 func TestUserGetByID_NotFound(t *testing.T) {
-	_, _, _, userSvc, _, cleanup := setup(t)
+	_, _, _, userSvc, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := userSvc.GetByID(context.Background(), "00000000-0000-0000-0000-000000000000")
@@ -113,7 +113,7 @@ func TestUserGetByID_NotFound(t *testing.T) {
 }
 
 func TestUserGetByEmail(t *testing.T) {
-	_, _, _, userSvc, _, f, cleanup := setupWithFixtures(t)
+	_, _, _, userSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	got, err := userSvc.GetByEmail(context.Background(), f.UserStaff.Email)
@@ -126,7 +126,7 @@ func TestUserGetByEmail(t *testing.T) {
 }
 
 func TestUserList(t *testing.T) {
-	_, _, _, userSvc, _, _, cleanup := setupWithFixtures(t)
+	_, _, _, userSvc, _, _, _, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	users, err := userSvc.List(context.Background())
@@ -139,7 +139,7 @@ func TestUserList(t *testing.T) {
 }
 
 func TestUserDelete(t *testing.T) {
-	_, _, _, userSvc, _, f, cleanup := setupWithFixtures(t)
+	_, _, _, userSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -154,7 +154,7 @@ func TestUserDelete(t *testing.T) {
 }
 
 func TestUserDelete_NotFound(t *testing.T) {
-	_, _, _, userSvc, _, cleanup := setup(t)
+	_, _, _, userSvc, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	err := userSvc.Delete(context.Background(), "00000000-0000-0000-0000-000000000000")
@@ -164,7 +164,7 @@ func TestUserDelete_NotFound(t *testing.T) {
 }
 
 func TestAuthLogin_Integration(t *testing.T) {
-	_, _, _, _, authSvc, f, cleanup := setupWithFixtures(t)
+	_, _, _, _, authSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	token, err := authSvc.Login(context.Background(), "admin@test.com", "adminpass1")
@@ -188,7 +188,7 @@ func TestAuthLogin_Integration(t *testing.T) {
 }
 
 func TestAuthLogin_WrongPassword_Integration(t *testing.T) {
-	_, _, _, _, authSvc, _, cleanup := setupWithFixtures(t)
+	_, _, _, _, authSvc, _, _, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	_, err := authSvc.Login(context.Background(), "admin@test.com", "wrongpassword")
