@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/RodrickSia/bikeKeeper/internal/auth"
 	"github.com/RodrickSia/bikeKeeper/internal/card"
 	"github.com/RodrickSia/bikeKeeper/internal/member"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
+	"github.com/RodrickSia/bikeKeeper/internal/user"
 	"github.com/RodrickSia/bikeKeeper/tests/testutil"
 )
 
@@ -42,43 +44,55 @@ type Fixtures struct {
 
 	SessionCompleted *parkingsession.ParkingSession
 	SessionOngoing   *parkingsession.ParkingSession
+
+	UserAdmin   *user.User
+	UserStaff   *user.User
+	UserStudent *user.User
+
+	TokenAdmin   string
+	TokenStaff   string
+	TokenStudent string
 }
 
 // setup returns all three services wired to a clean, empty test DB.
-func setup(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, func()) {
+func setup(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, func()) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
-	memberSvc, cardSvc, sessionSvc := buildServices(db)
+	memberSvc, cardSvc, sessionSvc, userSvc, authSvc := buildServices(db)
 	cleanup := func() {
-		testutil.CleanTables(t, db, "parking_sessions", "cards", "members")
+		testutil.CleanTables(t, db, "parking_sessions", "cards", "members", "users")
 	}
 	cleanup()
-	return memberSvc, cardSvc, sessionSvc, cleanup
+	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, cleanup
 }
 
 // setupWithFixtures seeds the full dummy dataset and returns services alongside
 // the Fixtures struct so tests can reference known values.
-func setupWithFixtures(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *Fixtures, func()) {
+func setupWithFixtures(t *testing.T) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service, *Fixtures, func()) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
-	memberSvc, cardSvc, sessionSvc := buildServices(db)
+	memberSvc, cardSvc, sessionSvc, userSvc, authSvc := buildServices(db)
 	cleanup := func() {
-		testutil.CleanTables(t, db, "parking_sessions", "cards", "members")
+		testutil.CleanTables(t, db, "parking_sessions", "cards", "members", "users")
 	}
 	cleanup()
 
-	f, err := seedFixtures(context.Background(), memberSvc, cardSvc, sessionSvc)
+	f, err := seedFixtures(context.Background(), memberSvc, cardSvc, sessionSvc, userSvc, authSvc)
 	if err != nil {
 		t.Fatalf("seedFixtures: %v", err)
 	}
-	return memberSvc, cardSvc, sessionSvc, f, cleanup
+	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc, f, cleanup
 }
 
-func buildServices(db *sql.DB) (*member.Service, *card.Service, *parkingsession.Service) {
+func buildServices(db *sql.DB) (*member.Service, *card.Service, *parkingsession.Service, *user.Service, *auth.Service) {
 	memberSvc := member.NewService(member.NewRepository(db))
 	cardSvc := card.NewService(card.NewRepository(db))
 	sessionSvc := parkingsession.NewService(parkingsession.NewRepository(db), &testutil.MockOCRService{}, &testutil.MockImageStore{})
-	return memberSvc, cardSvc, sessionSvc
+	userRepo := user.NewRepository(db)
+	userSvc := user.NewService(userRepo)
+	authAdapter := user.NewAuthAdapter(userRepo)
+	authSvc := auth.NewService(authAdapter)
+	return memberSvc, cardSvc, sessionSvc, userSvc, authSvc
 }
 
 func seedFixtures(
@@ -86,6 +100,8 @@ func seedFixtures(
 	memberSvc *member.Service,
 	cardSvc *card.Service,
 	sessionSvc *parkingsession.Service,
+	userSvc *user.Service,
+	authSvc *auth.Service,
 ) (*Fixtures, error) {
 	// --- Members ---
 	phone1 := "0901234567"
@@ -190,6 +206,48 @@ func seedFixtures(
 		return nil, fmt.Errorf("check-in sessionOngoing: %w", err)
 	}
 
+	// --- Users ---
+	userAdmin, err := userSvc.Create(ctx, user.CreateParams{
+		Email:    "admin@test.com",
+		Password: "adminpass1",
+		Role:     "admin",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create userAdmin: %w", err)
+	}
+
+	userStaff, err := userSvc.Create(ctx, user.CreateParams{
+		Email:    "staff@test.com",
+		Password: "staffpass1",
+		Role:     "staff",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create userStaff: %w", err)
+	}
+
+	userStudent, err := userSvc.Create(ctx, user.CreateParams{
+		Email:    "student@test.com",
+		Password: "studentpass1",
+		Role:     "student",
+		MemberID: &memberA.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create userStudent: %w", err)
+	}
+
+	tokenAdmin, err := authSvc.Login(ctx, "admin@test.com", "adminpass1")
+	if err != nil {
+		return nil, fmt.Errorf("login admin: %w", err)
+	}
+	tokenStaff, err := authSvc.Login(ctx, "staff@test.com", "staffpass1")
+	if err != nil {
+		return nil, fmt.Errorf("login staff: %w", err)
+	}
+	tokenStudent, err := authSvc.Login(ctx, "student@test.com", "studentpass1")
+	if err != nil {
+		return nil, fmt.Errorf("login student: %w", err)
+	}
+
 	return &Fixtures{
 		MemberA:          memberA,
 		MemberB:          memberB,
@@ -200,5 +258,11 @@ func seedFixtures(
 		CardCasual:       cardCasual,
 		SessionCompleted: sessionCompleted,
 		SessionOngoing:   sessionOngoing,
+		UserAdmin:        userAdmin,
+		UserStaff:        userStaff,
+		UserStudent:      userStudent,
+		TokenAdmin:       tokenAdmin,
+		TokenStaff:       tokenStaff,
+		TokenStudent:     tokenStudent,
 	}, nil
 }

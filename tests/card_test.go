@@ -10,7 +10,7 @@ import (
 // --- Create ---
 
 func TestCardCreate_Monthly(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// New monthly card linked to MemberA
@@ -40,7 +40,7 @@ func TestCardCreate_Monthly(t *testing.T) {
 }
 
 func TestCardCreate_Casual(t *testing.T) {
-	_, cardSvc, _, cleanup := setup(t)
+	_, cardSvc, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	c, err := cardSvc.Create(context.Background(), card.CreateParams{
@@ -56,7 +56,7 @@ func TestCardCreate_Casual(t *testing.T) {
 }
 
 func TestCardCreate_InvalidType(t *testing.T) {
-	_, cardSvc, _, cleanup := setup(t)
+	_, cardSvc, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := cardSvc.Create(context.Background(), card.CreateParams{
@@ -71,7 +71,7 @@ func TestCardCreate_InvalidType(t *testing.T) {
 // --- Read ---
 
 func TestCardGetByUID(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardActive: NFC-MONTHLY-001, monthly, MemberA, active
@@ -94,7 +94,7 @@ func TestCardGetByUID(t *testing.T) {
 }
 
 func TestCardGetByUID_Blocked(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardBlocked: NFC-MONTHLY-002, monthly, MemberB, blocked
@@ -108,7 +108,7 @@ func TestCardGetByUID_Blocked(t *testing.T) {
 }
 
 func TestCardGetByUID_NotFound(t *testing.T) {
-	_, cardSvc, _, cleanup := setup(t)
+	_, cardSvc, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	_, err := cardSvc.GetByUID(context.Background(), "NONEXISTENT-CARD")
@@ -118,7 +118,7 @@ func TestCardGetByUID_NotFound(t *testing.T) {
 }
 
 func TestCardListByMember(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// MemberA owns only CardActive (NFC-MONTHLY-001)
@@ -137,7 +137,7 @@ func TestCardListByMember(t *testing.T) {
 // --- Update ---
 
 func TestCardUpdate_Status(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// Block CardCasual (currently active)
@@ -158,7 +158,7 @@ func TestCardUpdate_Status(t *testing.T) {
 }
 
 func TestCardUpdate_Type(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// Upgrade CardCasual to monthly
@@ -179,7 +179,7 @@ func TestCardUpdate_Type(t *testing.T) {
 }
 
 func TestCardUpdate_InvalidStatus(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	bad := "expired"
@@ -195,7 +195,7 @@ func TestCardUpdate_InvalidStatus(t *testing.T) {
 // --- ToggleInside ---
 
 func TestCardToggleInside(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -219,7 +219,7 @@ func TestCardToggleInside(t *testing.T) {
 }
 
 func TestCardToggleInside_BlockedCard(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardBlocked has status "blocked" — toggle must be rejected
@@ -230,7 +230,7 @@ func TestCardToggleInside_BlockedCard(t *testing.T) {
 }
 
 func TestCardToggleInside_LostCard(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardLost has status "lost" — toggle must be rejected
@@ -243,7 +243,7 @@ func TestCardToggleInside_LostCard(t *testing.T) {
 // --- Delete ---
 
 func TestCardDelete(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardBlocked has no sessions — safe to delete
@@ -258,7 +258,7 @@ func TestCardDelete(t *testing.T) {
 }
 
 func TestCardDelete_WithSessions(t *testing.T) {
-	_, cardSvc, _, f, cleanup := setupWithFixtures(t)
+	_, cardSvc, _, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardActive has a completed session — ON DELETE RESTRICT prevents deletion
@@ -269,7 +269,7 @@ func TestCardDelete_WithSessions(t *testing.T) {
 }
 
 func TestCardDelete_NotFound(t *testing.T) {
-	_, cardSvc, _, cleanup := setup(t)
+	_, cardSvc, _, _, _, cleanup := setup(t)
 	defer cleanup()
 
 	err := cardSvc.Delete(context.Background(), "NONEXISTENT")

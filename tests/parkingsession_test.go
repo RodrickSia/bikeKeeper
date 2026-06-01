@@ -10,7 +10,7 @@ import (
 // --- CheckIn ---
 
 func TestSessionCheckIn(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardActive has a *completed* session — no ongoing, so new CheckIn is allowed
@@ -35,7 +35,7 @@ func TestSessionCheckIn(t *testing.T) {
 }
 
 func TestSessionCheckIn_DuplicateBlocked(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardCasual already has an ongoing session (SessionOngoing in fixtures)
@@ -50,7 +50,7 @@ func TestSessionCheckIn_DuplicateBlocked(t *testing.T) {
 // --- CheckOut ---
 
 func TestSessionCheckOut(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -71,7 +71,7 @@ func TestSessionCheckOut(t *testing.T) {
 }
 
 func TestSessionCheckOut_AlreadyCompleted(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// SessionCompleted is already checked out in fixtures
@@ -84,7 +84,7 @@ func TestSessionCheckOut_AlreadyCompleted(t *testing.T) {
 // --- GetByID ---
 
 func TestSessionGetByID_Completed(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// SessionCompleted: CardActive, status completed
@@ -104,7 +104,7 @@ func TestSessionGetByID_Completed(t *testing.T) {
 }
 
 func TestSessionGetByID_Ongoing(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// SessionOngoing: CardCasual, ongoing
@@ -121,7 +121,7 @@ func TestSessionGetByID_Ongoing(t *testing.T) {
 }
 
 func TestSessionGetByID_NotFound(t *testing.T) {
-	_, _, sessionSvc, _, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, _, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	_, err := sessionSvc.GetByID(context.Background(), 999999)
@@ -133,7 +133,7 @@ func TestSessionGetByID_NotFound(t *testing.T) {
 // --- ListByCard ---
 
 func TestSessionListByCard(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	// CardActive has exactly 1 session (completed)
@@ -150,7 +150,7 @@ func TestSessionListByCard(t *testing.T) {
 }
 
 func TestSessionListByCard_Multiple(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -175,7 +175,7 @@ func TestSessionListByCard_Multiple(t *testing.T) {
 // --- Delete ---
 
 func TestSessionDelete(t *testing.T) {
-	_, _, sessionSvc, f, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -191,7 +191,7 @@ func TestSessionDelete(t *testing.T) {
 }
 
 func TestSessionDelete_NotFound(t *testing.T) {
-	_, _, sessionSvc, _, cleanup := setupWithFixtures(t)
+	_, _, sessionSvc, _, _, _, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
 	err := sessionSvc.Delete(context.Background(), 999999)
