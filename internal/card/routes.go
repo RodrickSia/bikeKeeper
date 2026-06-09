@@ -13,7 +13,7 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, prefix string, mw ...func(ht
 
 	mux.Handle("POST "+prefix+"/cards", wrap(h.create))
 	mux.Handle("GET "+prefix+"/cards/{cardUID}", wrap(h.getByUID))
-	mux.Handle("GET "+prefix+"/cards/member/{memberID}", wrap(h.listByMember))
+	mux.Handle("GET "+prefix+"/members-cards/{memberID}", wrap(h.listByMember))
 	mux.Handle("PUT "+prefix+"/cards/{cardUID}", wrap(h.update))
 	mux.Handle("POST "+prefix+"/cards/{cardUID}/toggle", wrap(h.toggleInside))
 	mux.Handle("DELETE "+prefix+"/cards/{cardUID}", wrap(h.delete))
