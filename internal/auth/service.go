@@ -19,6 +19,7 @@ type UserRecord struct {
 	PasswordHash string
 	Role         string
 	MemberID     *string
+	Status       string
 }
 
 type Service struct {
@@ -37,14 +38,25 @@ func NewService(repo UserFinder) *Service {
 	}
 }
 
-func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+type UserResponse struct {
+	ID       string  `json:"id"`
+	Email    string  `json:"email"`
+	Role     string  `json:"role"`
+	MemberID *string `json:"memberId,omitempty"`
+}
+
+func (s *Service) Login(ctx context.Context, email, password string) (string, *UserResponse, error) {
 	record, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", fmt.Errorf("invalid credentials")
+		return "", nil, fmt.Errorf("user search failed: %w", err)
+	}
+
+	if record.Status != "active" {
+		return "", nil, fmt.Errorf("account status is %s", record.Status)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(record.PasswordHash), []byte(password)); err != nil {
-		return "", fmt.Errorf("invalid credentials")
+		return "", nil, fmt.Errorf("password mismatch: %w", err)
 	}
 
 	memberID := ""
@@ -63,7 +75,17 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(s.jwtSecret)
+	tokenStr, err := token.SignedString(s.jwtSecret)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return tokenStr, &UserResponse{
+		ID:       record.ID,
+		Email:    email,
+		Role:     record.Role,
+		MemberID: record.MemberID,
+	}, nil
 }
 
 func (s *Service) ValidateToken(tokenStr string) (*Claims, error) {
