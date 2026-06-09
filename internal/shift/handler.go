@@ -14,7 +14,8 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	from := queryStr(r, "from")
 	to := queryStr(r, "to")
-	shifts, err := h.svc.List(r.Context(), from, to)
+	staffID := queryStr(r, "staffId")
+	shifts, err := h.svc.List(r.Context(), from, to, staffID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list shifts")
 		return

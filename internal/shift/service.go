@@ -42,8 +42,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Shift, error) {
 	return sh, nil
 }
 
-func (s *Service) List(ctx context.Context, from, to *string) ([]*Shift, error) {
-	shifts, err := s.repo.List(ctx, from, to)
+func (s *Service) List(ctx context.Context, from, to, staffID *string) ([]*Shift, error) {
+	shifts, err := s.repo.List(ctx, from, to, staffID)
 	if err != nil {
 		return nil, err
 	}
