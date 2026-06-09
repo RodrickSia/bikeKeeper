@@ -14,5 +14,6 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, prefix string, mw ...func(ht
 	mux.Handle("POST "+prefix+"/users", wrap(h.create))
 	mux.Handle("GET "+prefix+"/users", wrap(h.list))
 	mux.Handle("GET "+prefix+"/users/{id}", wrap(h.getByID))
+	mux.Handle("PUT "+prefix+"/users/{id}/status", wrap(h.updateStatus))
 	mux.Handle("DELETE "+prefix+"/users/{id}", wrap(h.delete))
 }

@@ -11,7 +11,7 @@ CREATE TABLE users (
 -- Seed default admin user (password: admin123 — change immediately after first login)
 -- bcrypt hash of "admin123"
 INSERT INTO users (email, password_hash, role)
-VALUES ('admin@bikekeeper.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin');
+VALUES ('admin@bikekeeper.local', '$2a$10$NivP3Eyc1dXEt7yUp3kdPOUjJma8pONGFKE/1gcLu3kL7pDnCLN5G', 'admin');
 
 -- +goose Down
 DROP TABLE IF EXISTS users;
