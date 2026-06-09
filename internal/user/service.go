@@ -20,6 +20,7 @@ type CreateParams struct {
 	Password string
 	Role     string
 	MemberID *string
+	Status   string
 }
 
 func (s *Service) Create(ctx context.Context, params CreateParams) (*User, error) {
@@ -34,11 +35,17 @@ func (s *Service) Create(ctx context.Context, params CreateParams) (*User, error
 		return nil, fmt.Errorf("hashing password: %w", err)
 	}
 
+	status := params.Status
+	if status == "" {
+		status = StatusPending
+	}
+
 	user := &User{
 		Email:        params.Email,
 		PasswordHash: string(hash),
 		Role:         params.Role,
 		MemberID:     params.MemberID,
+		Status:       status,
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
@@ -61,4 +68,13 @@ func (s *Service) List(ctx context.Context) ([]*User, error) {
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *Service) UpdateStatus(ctx context.Context, id string, status string) error {
+	switch status {
+	case StatusPending, StatusActive, StatusRejected, StatusSuspended:
+	default:
+		return fmt.Errorf("invalid status: %s", status)
+	}
+	return s.repo.UpdateStatus(ctx, id, status)
 }

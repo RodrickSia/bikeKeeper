@@ -24,5 +24,6 @@ func (a *AuthAdapter) GetByEmail(ctx context.Context, email string) (auth.UserRe
 		PasswordHash: u.PasswordHash,
 		Role:         u.Role,
 		MemberID:     u.MemberID,
+		Status:       u.Status,
 	}, nil
 }
