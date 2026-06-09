@@ -9,7 +9,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, s *Shift) error
 	GetByID(ctx context.Context, id string) (*Shift, error)
-	List(ctx context.Context, from, to *string) ([]*Shift, error)
+	List(ctx context.Context, from, to, staffID *string) ([]*Shift, error)
 	UpdateStatus(ctx context.Context, id, status string) error
 	UpdateNotes(ctx context.Context, id string, notes *string) error
 	Delete(ctx context.Context, id string) error
@@ -39,21 +39,29 @@ func (r *repository) GetByID(ctx context.Context, id string) (*Shift, error) {
 	return s, err
 }
 
-func (r *repository) List(ctx context.Context, from, to *string) ([]*Shift, error) {
-	q := `SELECT id,name,type,start_time,end_time,date,status,notes,created_at FROM shifts WHERE 1=1`
+func (r *repository) List(ctx context.Context, from, to, staffID *string) ([]*Shift, error) {
+	q := `SELECT DISTINCT s.id,s.name,s.type,s.start_time,s.end_time,s.date,s.status,s.notes,s.created_at FROM shifts s`
 	args := []any{}
 	i := 1
+	if staffID != nil {
+		q += ` JOIN shift_assignments sa ON sa.shift_id = s.id`
+		args = append(args, *staffID)
+		q += fmt.Sprintf(" WHERE sa.user_id = $%d", i)
+		i++
+	} else {
+		q += " WHERE 1=1"
+	}
 	if from != nil {
 		args = append(args, *from)
-		q += fmt.Sprintf(" AND date >= $%d", i)
+		q += fmt.Sprintf(" AND s.date >= $%d", i)
 		i++
 	}
 	if to != nil {
 		args = append(args, *to)
-		q += fmt.Sprintf(" AND date <= $%d", i)
+		q += fmt.Sprintf(" AND s.date <= $%d", i)
 		i++
 	}
-	q += " ORDER BY date, start_time"
+	q += " ORDER BY s.date, s.start_time"
 	rows, err := r.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
@@ -62,7 +70,7 @@ func (r *repository) List(ctx context.Context, from, to *string) ([]*Shift, erro
 	shifts := []*Shift{}
 	for rows.Next() {
 		s := &Shift{}
-		if err := rows.Scan(&s.ID, &s.Name, &s.Type, &s.StartTime, &s.EndTime, &s.Date, &s.Status, &s.Notes, &s.CreatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Type, &s.StartTime, &s.EndTime, &s.Date, &s.Status, &s.Notes, &s.CreatedAt); err != nil { // scan list
 			return nil, err
 		}
 		shifts = append(shifts, s)
