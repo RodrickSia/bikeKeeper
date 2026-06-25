@@ -36,13 +36,17 @@ func (r *repository) Create(ctx context.Context, req *CardRequest) error {
 
 func (r *repository) GetByID(ctx context.Context, id string) (*CardRequest, error) {
 	const query = `
-		SELECT id, member_id, vehicle_plate, vehicle_brand, vehicle_model, vehicle_color,
-		       id_card_number, note, status, card_uid, rejected_reason,
-		       submitted_at, reviewed_at, reviewed_by
-		FROM card_requests WHERE id = $1`
+		SELECT cr.id, cr.member_id, m.full_name, m.student_id,
+		       cr.vehicle_plate, cr.vehicle_brand, cr.vehicle_model, cr.vehicle_color,
+		       cr.id_card_number, cr.note, cr.status, cr.card_uid, cr.rejected_reason,
+		       cr.submitted_at, cr.reviewed_at, cr.reviewed_by
+		FROM card_requests cr
+		JOIN members m ON m.id = cr.member_id
+		WHERE cr.id = $1`
 	req := &CardRequest{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&req.ID, &req.MemberID, &req.VehiclePlate, &req.VehicleBrand, &req.VehicleModel,
+		&req.ID, &req.MemberID, &req.UserName, &req.StudentID,
+		&req.VehiclePlate, &req.VehicleBrand, &req.VehicleModel,
 		&req.VehicleColor, &req.IDCardNumber, &req.Note, &req.Status, &req.CardUID,
 		&req.RejectedReason, &req.SubmittedAt, &req.ReviewedAt, &req.ReviewedBy,
 	)
@@ -54,25 +58,30 @@ func (r *repository) GetByID(ctx context.Context, id string) (*CardRequest, erro
 
 func (r *repository) ListByMember(ctx context.Context, memberID string) ([]*CardRequest, error) {
 	const query = `
-		SELECT id, member_id, vehicle_plate, vehicle_brand, vehicle_model, vehicle_color,
-		       id_card_number, note, status, card_uid, rejected_reason,
-		       submitted_at, reviewed_at, reviewed_by
-		FROM card_requests WHERE member_id = $1 ORDER BY submitted_at DESC`
+		SELECT cr.id, cr.member_id, m.full_name, m.student_id,
+		       cr.vehicle_plate, cr.vehicle_brand, cr.vehicle_model, cr.vehicle_color,
+		       cr.id_card_number, cr.note, cr.status, cr.card_uid, cr.rejected_reason,
+		       cr.submitted_at, cr.reviewed_at, cr.reviewed_by
+		FROM card_requests cr
+		JOIN members m ON m.id = cr.member_id
+		WHERE cr.member_id = $1 ORDER BY cr.submitted_at DESC`
 	return r.scan(ctx, query, memberID)
 }
 
 func (r *repository) List(ctx context.Context, status *string) ([]*CardRequest, error) {
 	query := `
-		SELECT id, member_id, vehicle_plate, vehicle_brand, vehicle_model, vehicle_color,
-		       id_card_number, note, status, card_uid, rejected_reason,
-		       submitted_at, reviewed_at, reviewed_by
-		FROM card_requests`
+		SELECT cr.id, cr.member_id, m.full_name, m.student_id,
+		       cr.vehicle_plate, cr.vehicle_brand, cr.vehicle_model, cr.vehicle_color,
+		       cr.id_card_number, cr.note, cr.status, cr.card_uid, cr.rejected_reason,
+		       cr.submitted_at, cr.reviewed_at, cr.reviewed_by
+		FROM card_requests cr
+		JOIN members m ON m.id = cr.member_id`
 	args := []any{}
 	if status != nil {
-		query += " WHERE status = $1"
+		query += " WHERE cr.status = $1"
 		args = append(args, *status)
 	}
-	query += " ORDER BY submitted_at DESC"
+	query += " ORDER BY cr.submitted_at DESC"
 	return r.scan(ctx, query, args...)
 }
 
@@ -86,7 +95,8 @@ func (r *repository) scan(ctx context.Context, query string, args ...any) ([]*Ca
 	for rows.Next() {
 		req := &CardRequest{}
 		if err := rows.Scan(
-			&req.ID, &req.MemberID, &req.VehiclePlate, &req.VehicleBrand, &req.VehicleModel,
+			&req.ID, &req.MemberID, &req.UserName, &req.StudentID,
+			&req.VehiclePlate, &req.VehicleBrand, &req.VehicleModel,
 			&req.VehicleColor, &req.IDCardNumber, &req.Note, &req.Status, &req.CardUID,
 			&req.RejectedReason, &req.SubmittedAt, &req.ReviewedAt, &req.ReviewedBy,
 		); err != nil {

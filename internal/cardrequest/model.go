@@ -14,6 +14,8 @@ const (
 type CardRequest struct {
 	ID             string     `json:"id"`
 	MemberID       string     `json:"memberId"`
+	UserName       string     `json:"userName"`
+	StudentID      string     `json:"studentId"`
 	VehiclePlate   string     `json:"vehiclePlate"`
 	VehicleBrand   string     `json:"vehicleBrand"`
 	VehicleModel   string     `json:"vehicleModel"`
