@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Repository interface {
@@ -31,11 +32,13 @@ func (r *repository) Create(ctx context.Context, s *Shift) error {
 
 func (r *repository) GetByID(ctx context.Context, id string) (*Shift, error) {
 	s := &Shift{}
+	var scannedDate time.Time
 	err := r.db.QueryRowContext(ctx, `SELECT id,name,type,start_time,end_time,date,status,notes,created_at FROM shifts WHERE id=$1`, id).
-		Scan(&s.ID, &s.Name, &s.Type, &s.StartTime, &s.EndTime, &s.Date, &s.Status, &s.Notes, &s.CreatedAt)
+		Scan(&s.ID, &s.Name, &s.Type, &s.StartTime, &s.EndTime, &scannedDate, &s.Status, &s.Notes, &s.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("shift not found")
 	}
+	s.Date = scannedDate.Format("2006-01-02")
 	return s, err
 }
 
@@ -70,9 +73,11 @@ func (r *repository) List(ctx context.Context, from, to, staffID *string) ([]*Sh
 	shifts := []*Shift{}
 	for rows.Next() {
 		s := &Shift{}
-		if err := rows.Scan(&s.ID, &s.Name, &s.Type, &s.StartTime, &s.EndTime, &s.Date, &s.Status, &s.Notes, &s.CreatedAt); err != nil { // scan list
+		var scannedDate time.Time
+		if err := rows.Scan(&s.ID, &s.Name, &s.Type, &s.StartTime, &s.EndTime, &scannedDate, &s.Status, &s.Notes, &s.CreatedAt); err != nil { // scan list
 			return nil, err
 		}
+		s.Date = scannedDate.Format("2006-01-02")
 		shifts = append(shifts, s)
 	}
 	return shifts, rows.Err()

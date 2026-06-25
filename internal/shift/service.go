@@ -10,12 +10,12 @@ type Service struct{ repo Repository }
 func NewService(repo Repository) *Service { return &Service{repo: repo} }
 
 type CreateParams struct {
-	Name      string
-	Type      string
-	StartTime string
-	EndTime   string
-	Date      string
-	Notes     *string
+	Name      string  `json:"name"`
+	Type      string  `json:"type"`
+	StartTime string  `json:"startTime"`
+	EndTime   string  `json:"endTime"`
+	Date      string  `json:"date"`
+	Notes     *string `json:"notes"`
 }
 
 func (s *Service) Create(ctx context.Context, p CreateParams) (*Shift, error) {
