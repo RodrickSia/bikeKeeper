@@ -3,6 +3,8 @@ package card
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/RodrickSia/bikeKeeper/internal/auth"
 )
 
 type Handler struct {
@@ -13,8 +15,20 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
+func requireFacultyOrAdmin(w http.ResponseWriter, r *http.Request) bool {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil || (claims.Role != "faculty" && claims.Role != "admin") {
+		writeError(w, http.StatusForbidden, "forbidden")
+		return false
+	}
+	return true
+}
+
 // POST /cards
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	if !requireFacultyOrAdmin(w, r) {
+		return
+	}
 	var body struct {
 		CardUID  string  `json:"cardUid"`
 		CardType string  `json:"cardType"`
@@ -65,6 +79,16 @@ func (h *Handler) listByMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Allow if user is faculty/admin OR requesting their own cards
+	claims := auth.GetClaims(r.Context())
+	if claims != nil {
+		isAdminOrFaculty := claims.Role == "faculty" || claims.Role == "admin"
+		if !isAdminOrFaculty && claims.MemberID != memberID {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+	}
+
 	cards, err := h.svc.ListByMember(r.Context(), memberID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list cards")
@@ -75,6 +99,9 @@ func (h *Handler) listByMember(w http.ResponseWriter, r *http.Request) {
 
 // PUT /cards/{cardUID}
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	if !requireFacultyOrAdmin(w, r) {
+		return
+	}
 	cardUID := r.PathValue("cardUID")
 	if cardUID == "" {
 		writeError(w, http.StatusBadRequest, "cardUID is required")
@@ -106,6 +133,9 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 
 // POST /cards/{cardUID}/toggle
 func (h *Handler) toggleInside(w http.ResponseWriter, r *http.Request) {
+	if !requireFacultyOrAdmin(w, r) {
+		return
+	}
 	cardUID := r.PathValue("cardUID")
 	if cardUID == "" {
 		writeError(w, http.StatusBadRequest, "cardUID is required")
@@ -122,6 +152,9 @@ func (h *Handler) toggleInside(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /cards/{cardUID}
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	if !requireFacultyOrAdmin(w, r) {
+		return
+	}
 	cardUID := r.PathValue("cardUID")
 	if cardUID == "" {
 		writeError(w, http.StatusBadRequest, "cardUID is required")

@@ -1,16 +1,29 @@
 package payment
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+
+	"github.com/RodrickSia/bikeKeeper/internal/auth"
 )
 
-type Handler struct {
-	svc *Service
+type CardFinder interface {
+	GetByUID(ctx context.Context, cardUID string) (*CardInfo, error)
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+type CardInfo struct {
+	CardUID  string
+	MemberID *string
+}
+
+type Handler struct {
+	svc  *Service
+	cards CardFinder
+}
+
+func NewHandler(svc *Service, cards CardFinder) *Handler {
+	return &Handler{svc: svc, cards: cards}
 }
 
 func (h *Handler) deposit(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +31,23 @@ func (h *Handler) deposit(w http.ResponseWriter, r *http.Request) {
 	if cardUID == "" {
 		writeError(w, http.StatusBadRequest, "cardUID is required")
 		return
+	}
+
+	// Check ownership
+	claims := auth.GetClaims(r.Context())
+	if claims != nil {
+		isAdminOrFaculty := claims.Role == "faculty" || claims.Role == "admin"
+		if !isAdminOrFaculty {
+			card, err := h.cards.GetByUID(r.Context(), cardUID)
+			if err != nil {
+				writeError(w, http.StatusNotFound, "card not found")
+				return
+			}
+			if card.MemberID == nil || *card.MemberID != claims.MemberID {
+				writeError(w, http.StatusForbidden, "forbidden")
+				return
+			}
+		}
 	}
 
 	var body struct {

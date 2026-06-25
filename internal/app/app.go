@@ -66,10 +66,16 @@ func (a *App) registerRoutes(prefix string) {
 	staffOnly := auth.RequireRole(user.RoleStaff, user.RoleFaculty, user.RoleAdmin)
 	facultyOnly := auth.RequireRole(user.RoleFaculty, user.RoleAdmin)
 
+	// cards
+	cardRepo := card.NewRepository(a.DB)
+	cardSvc := card.NewService(cardRepo)
+	cardHandler := card.NewHandler(cardSvc)
+	card.RegisterRoutes(a.Router, cardHandler, prefix, authenticated)
+
 	// payment
 	paymentRepo := payment.NewRepository(a.DB)
 	paymentSvc := payment.NewService(paymentRepo)
-	paymentHandler := payment.NewHandler(paymentSvc)
+	paymentHandler := payment.NewHandler(paymentSvc, &cardFinderAdapter{repo: cardRepo})
 	payment.RegisterRoutes(a.Router, paymentHandler, prefix, authenticated)
 
 	// users
@@ -90,12 +96,6 @@ func (a *App) registerRoutes(prefix string) {
 	// members
 	memberHandler := member.NewHandler(memberSvc)
 	member.RegisterRoutes(a.Router, memberHandler, prefix, authenticated, facultyOnly)
-
-	// cards
-	cardRepo := card.NewRepository(a.DB)
-	cardSvc := card.NewService(cardRepo)
-	cardHandler := card.NewHandler(cardSvc)
-	card.RegisterRoutes(a.Router, cardHandler, prefix, authenticated, facultyOnly)
 
 	// card requests
 	cardRequestRepo := cardrequest.NewRepository(a.DB)
@@ -189,6 +189,18 @@ func (a *userCreatorAdapter) CreateRegister(ctx context.Context, email, password
 		Status:   user.StatusPending,
 	})
 	return err
+}
+
+type cardFinderAdapter struct {
+	repo card.Repository
+}
+
+func (a *cardFinderAdapter) GetByUID(ctx context.Context, cardUID string) (*payment.CardInfo, error) {
+	c, err := a.repo.GetByUID(ctx, cardUID)
+	if err != nil {
+		return nil, err
+	}
+	return &payment.CardInfo{CardUID: c.CardUID, MemberID: c.MemberID}, nil
 }
 
 type memberCreatorAdapter struct {
