@@ -28,12 +28,19 @@ func (r *repository) Deposit(ctx context.Context, cardUID string, amount float64
 	}
 	defer tx.Rollback()
 
-	_, err = tx.ExecContext(ctx,
+	result, err := tx.ExecContext(ctx,
 		`UPDATE cards SET balance = balance + $1 WHERE card_uid = $2`,
 		amount, cardUID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("updating balance: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("checking update result: %w", err)
+	}
+	if affected == 0 {
+		return nil, fmt.Errorf("card %s not found", cardUID)
 	}
 
 	t := &Transaction{}

@@ -18,7 +18,10 @@ type CreateParams struct {
 }
 
 func (s *Service) Add(ctx context.Context, p CreateParams) (*Vehicle, error) {
-	existing, _ := s.repo.FindByPlate(ctx, p.LicensePlate)
+	existing, err := s.repo.FindByPlate(ctx, p.LicensePlate)
+	if err != nil {
+		return nil, fmt.Errorf("checking existing plate: %w", err)
+	}
 	if existing != nil {
 		return nil, fmt.Errorf("vehicle with plate %s already registered", p.LicensePlate)
 	}

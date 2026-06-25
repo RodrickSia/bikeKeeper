@@ -51,7 +51,10 @@ func (h *Handler) report(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	var body struct{ Note string `json:"note"` }
-	json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
 	inc, err := h.svc.Resolve(r.Context(), r.PathValue("id"), body.Note)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

@@ -72,7 +72,10 @@ func (a *App) registerRoutes(prefix string) {
 	// parking sessions
 	sessionRepo := parkingsession.NewRepository(a.DB)
 	imageStore := storage.NewLocalStorage("./images")
-	plateProcessor := OCR.NewPlateProcessor()
+	plateProcessor, err := OCR.NewPlateProcessor()
+	if err != nil {
+		panic(err)
+	}
 	sessionSvc := parkingsession.NewService(sessionRepo, plateProcessor, imageStore, &paymentAdapter{svc: paymentSvc})
 	sessionHandler := parkingsession.NewHandler(sessionSvc)
 	parkingsession.RegisterRoutes(a.Router, sessionHandler, prefix, authenticated, staffOnly)

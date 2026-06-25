@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 )
 
 type PlateProcessor struct {
@@ -14,11 +15,15 @@ type PlateProcessor struct {
 	client     *http.Client
 }
 
-func NewPlateProcessor() *PlateProcessor {
-	return &PlateProcessor{
-		serviceURL: os.Getenv("OCR_SERVICE_URL"),
-		client:     &http.Client{},
+func NewPlateProcessor() (*PlateProcessor, error) {
+	serviceURL := os.Getenv("OCR_SERVICE_URL")
+	if serviceURL == "" {
+		return nil, fmt.Errorf("OCR_SERVICE_URL environment variable is required")
 	}
+	return &PlateProcessor{
+		serviceURL: serviceURL,
+		client:     &http.Client{Timeout: 30 * time.Second},
+	}, nil
 }
 
 type OCRServiceResponse struct {

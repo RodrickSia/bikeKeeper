@@ -12,10 +12,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o bikekeeper ./cmd/bikeKeeper
 # Runtime stage
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 COPY --from=builder /app/bikekeeper .
+
+USER appuser
 
 EXPOSE 8080
 

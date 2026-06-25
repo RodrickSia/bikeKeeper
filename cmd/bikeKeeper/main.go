@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/RodrickSia/bikeKeeper/internal/app"
 	"github.com/RodrickSia/bikeKeeper/internal/database"
@@ -18,9 +19,11 @@ func main() {
 	defer db.Close()
 	// run database migrations
 	if err := database.RunMigrations(db); err != nil {
-		log.Fatalf("Failed to run database migrations: %v", err)
-		database.RollbackMigrations(db)
-		return
+		log.Printf("Failed to run database migrations: %v", err)
+		if err := database.RollbackMigrations(db); err != nil {
+			log.Printf("Failed to rollback migrations: %v", err)
+		}
+		os.Exit(1)
 	}
 	application := app.New(db, prefix)
 	

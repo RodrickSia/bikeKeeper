@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -30,7 +31,8 @@ type Service struct {
 func NewService(repo UserFinder) *Service {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "bikekeeper-dev-secret" // fallback for development
+		secret = "bikekeeper-dev-secret"
+		log.Println("[WARN] JWT_SECRET not set, using insecure fallback secret")
 	}
 	return &Service{
 		repo:      repo,

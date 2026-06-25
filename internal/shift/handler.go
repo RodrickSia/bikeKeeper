@@ -62,7 +62,10 @@ func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) updateNotes(w http.ResponseWriter, r *http.Request) {
 	var body struct{ Notes *string `json:"notes"` }
-	json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
 	sh, err := h.svc.UpdateNotes(r.Context(), r.PathValue("id"), body.Notes)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

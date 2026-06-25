@@ -91,15 +91,15 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 	session.ImgPlateOutPath = &imgPlateOutPath
 	session.ImgPersonOutPath = &imgPersonOutPath
 
-	if err := s.repo.CheckOut(ctx, id, session); err != nil {
-		return fmt.Errorf("checking out session: %w", err)
-	}
-
 	const parkingFee = 5000.0
 	if s.payment != nil {
 		if err := s.payment.ChargeParking(ctx, session.CardUID, parkingFee, id); err != nil {
 			return fmt.Errorf("charging parking fee: %w", err)
 		}
+	}
+
+	if err := s.repo.CheckOut(ctx, id, session); err != nil {
+		return fmt.Errorf("checking out session: %w", err)
 	}
 
 	return nil
