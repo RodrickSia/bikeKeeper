@@ -42,6 +42,13 @@ func New(db *sql.DB, prefix string) *App {
 }
 
 func (a *App) registerRoutes(prefix string) {
+	// Health check — no auth required
+	a.Router.HandleFunc("GET "+prefix+"/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	// core repos + services initialized early for auth registration wiring
 	userRepo := user.NewRepository(a.DB)
 	userSvc := user.NewService(userRepo)
