@@ -237,15 +237,15 @@ func seedFixtures(
 		return nil, fmt.Errorf("create userStudent: %w", err)
 	}
 
-	tokenAdmin, err := authSvc.Login(ctx, "admin@test.com", "adminpass1")
+	tokenAdmin, _, err := authSvc.Login(ctx, "admin@test.com", "adminpass1")
 	if err != nil {
 		return nil, fmt.Errorf("login admin: %w", err)
 	}
-	tokenStaff, err := authSvc.Login(ctx, "staff@test.com", "staffpass1")
+	tokenStaff, _, err := authSvc.Login(ctx, "staff@test.com", "staffpass1")
 	if err != nil {
 		return nil, fmt.Errorf("login staff: %w", err)
 	}
-	tokenStudent, err := authSvc.Login(ctx, "student@test.com", "studentpass1")
+	tokenStudent, _, err := authSvc.Login(ctx, "student@test.com", "studentpass1")
 	if err != nil {
 		return nil, fmt.Errorf("login student: %w", err)
 	}

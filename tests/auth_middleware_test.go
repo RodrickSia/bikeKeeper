@@ -64,7 +64,7 @@ func TestAuthenticate_ValidToken(t *testing.T) {
 		Role:         "staff",
 	}
 
-	token, _ := svc.Login(context.Background(), "u@test.com", "password1")
+	token, _, _ := svc.Login(context.Background(), "u@test.com", "password1")
 
 	var gotClaims *auth.Claims
 	handler := auth.Authenticate(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +96,7 @@ func TestRequireRole_Allowed(t *testing.T) {
 		Role:         "admin",
 	}
 
-	token, _ := svc.Login(context.Background(), "admin@test.com", "password1")
+	token, _, _ := svc.Login(context.Background(), "admin@test.com", "password1")
 
 	handler := auth.Authenticate(svc)(
 		auth.RequireRole("faculty", "admin")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +122,7 @@ func TestRequireRole_Denied(t *testing.T) {
 		Role:         "student",
 	}
 
-	token, _ := svc.Login(context.Background(), "student@test.com", "password1")
+	token, _, _ := svc.Login(context.Background(), "student@test.com", "password1")
 
 	handler := auth.Authenticate(svc)(
 		auth.RequireRole("faculty", "admin")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +148,7 @@ func TestGetRole(t *testing.T) {
 		Role:         "faculty",
 	}
 
-	token, _ := svc.Login(context.Background(), "f@test.com", "password1")
+	token, _, _ := svc.Login(context.Background(), "f@test.com", "password1")
 
 	handler := auth.Authenticate(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		role := auth.GetRole(r.Context())

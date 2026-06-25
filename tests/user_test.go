@@ -167,7 +167,7 @@ func TestAuthLogin_Integration(t *testing.T) {
 	_, _, _, _, authSvc, _, f, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	token, err := authSvc.Login(context.Background(), "admin@test.com", "adminpass1")
+	token, _, err := authSvc.Login(context.Background(), "admin@test.com", "adminpass1")
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestAuthLogin_WrongPassword_Integration(t *testing.T) {
 	_, _, _, _, authSvc, _, _, cleanup := setupWithFixtures(t)
 	defer cleanup()
 
-	_, err := authSvc.Login(context.Background(), "admin@test.com", "wrongpassword")
+	_, _, err := authSvc.Login(context.Background(), "admin@test.com", "wrongpassword")
 	if err == nil {
 		t.Error("expected error for wrong password")
 	}

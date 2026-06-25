@@ -46,7 +46,7 @@ func TestLogin_Success(t *testing.T) {
 		Role:         "staff",
 	}
 
-	token, err := svc.Login(context.Background(), "staff@test.com", "password123")
+	token, _, err := svc.Login(context.Background(), "staff@test.com", "password123")
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 		Role:         "staff",
 	}
 
-	_, err := svc.Login(context.Background(), "staff@test.com", "wrong")
+	_, _, err := svc.Login(context.Background(), "staff@test.com", "wrong")
 	if err == nil {
 		t.Fatal("expected error for wrong password")
 	}
@@ -72,7 +72,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 func TestLogin_UserNotFound(t *testing.T) {
 	svc, _ := newTestService(t)
 
-	_, err := svc.Login(context.Background(), "nobody@test.com", "password123")
+	_, _, err := svc.Login(context.Background(), "nobody@test.com", "password123")
 	if err == nil {
 		t.Fatal("expected error for non-existent user")
 	}
@@ -88,7 +88,7 @@ func TestValidateToken_Valid(t *testing.T) {
 		MemberID:     &memberID,
 	}
 
-	token, err := svc.Login(context.Background(), "student@test.com", "pass1234")
+	token, _, err := svc.Login(context.Background(), "student@test.com", "pass1234")
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestValidateToken_TamperedSecret(t *testing.T) {
 		Role:         "admin",
 	}
 
-	token, err := svc.Login(context.Background(), "a@test.com", "pass1234")
+	token, _, err := svc.Login(context.Background(), "a@test.com", "pass1234")
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
