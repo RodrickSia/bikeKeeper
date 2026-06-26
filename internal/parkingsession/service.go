@@ -21,6 +21,7 @@ type CheckInParams struct {
 	CardUID     string
 	ImgPlateIn  []byte
 	ImgPersonIn []byte
+	PlateIn     string // optional, used for mock cards
 }
 
 type CheckOutParams struct {
@@ -48,12 +49,7 @@ func (s *Service) CheckIn(ctx context.Context, params CheckInParams) (*ParkingSe
 	//  Get the plate number
 	var plateIn string
 	if strings.HasPrefix(params.CardUID, "NFC-MOCK-") {
-		// Mock cards: skip OCR, use registered plate directly
-		vp, err := s.repo.GetVehiclePlateByCard(ctx, params.CardUID)
-		if err != nil {
-			return nil, fmt.Errorf("getting vehicle for card: %w", err)
-		}
-		plateIn = vp
+		plateIn = params.PlateIn
 	} else {
 		plateIn, err = s.plateProccessor.ExtractPlate(ctx, params.ImgPlateIn)
 		if err != nil {

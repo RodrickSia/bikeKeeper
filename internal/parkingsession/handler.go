@@ -44,6 +44,7 @@ func (h *Handler) checkIn(w http.ResponseWriter, r *http.Request) {
 		CardUID:     cardUID,
 		ImgPlateIn:  imgPlateIn,
 		ImgPersonIn: imgPersonIn,
+		PlateIn:     r.FormValue("plateIn"),
 	})
 	if err != nil {
 		writeError(w, http.StatusConflict, err.Error())
