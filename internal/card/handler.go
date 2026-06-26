@@ -82,8 +82,8 @@ func (h *Handler) listByMember(w http.ResponseWriter, r *http.Request) {
 	// Allow if user is faculty/admin OR requesting their own cards
 	claims := auth.GetClaims(r.Context())
 	if claims != nil {
-		isAdminOrFaculty := claims.Role == "faculty" || claims.Role == "admin"
-		if !isAdminOrFaculty && claims.MemberID != memberID {
+		isStaffOrAbove := claims.Role == "faculty" || claims.Role == "admin" || claims.Role == "staff"
+		if !isStaffOrAbove && claims.MemberID != memberID {
 			writeError(w, http.StatusForbidden, "forbidden")
 			return
 		}

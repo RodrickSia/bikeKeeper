@@ -3,6 +3,7 @@ package parkingsession
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type Service struct {
@@ -97,7 +98,9 @@ func plateMatches(registered, ocr string) bool {
 		}
 		return result
 	}
-	return norm(registered) == norm(ocr)
+	nr := norm(registered)
+	no := norm(ocr)
+	return nr == no || (len(no) >= 4 && (strings.Contains(nr, no) || strings.Contains(no, nr)))
 }
 
 func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams) error {
