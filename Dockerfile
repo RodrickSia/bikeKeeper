@@ -16,6 +16,7 @@ RUN apk add --no-cache ca-certificates && \
     addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
+RUN mkdir -p /app/images && chown appuser:appgroup /app/images
 COPY --from=builder /app/bikekeeper .
 
 USER appuser
