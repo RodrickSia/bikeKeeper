@@ -3,6 +3,8 @@ package member
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/RodrickSia/bikeKeeper/internal/auth"
 )
 
 type Handler struct {
@@ -15,6 +17,11 @@ func NewHandler(svc *Service) *Handler {
 
 // POST /members
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	role := auth.GetRole(r.Context())
+	if role != "faculty" && role != "admin" {
+		writeError(w, http.StatusForbidden, "only faculty and admin can create members")
+		return
+	}
 	var body struct {
 		StudentID string  `json:"studentId"`
 		FullName  string  `json:"fullName"`
@@ -85,6 +92,11 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 
 // PUT /members/{id}
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	role := auth.GetRole(r.Context())
+	if role != "faculty" && role != "admin" {
+		writeError(w, http.StatusForbidden, "only faculty and admin can update members")
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		writeError(w, http.StatusBadRequest, "id is required")
@@ -114,6 +126,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /members/{id}
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	role := auth.GetRole(r.Context())
+	if role != "faculty" && role != "admin" {
+		writeError(w, http.StatusForbidden, "only faculty and admin can delete members")
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		writeError(w, http.StatusBadRequest, "id is required")

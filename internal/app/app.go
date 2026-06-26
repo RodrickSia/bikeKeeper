@@ -96,7 +96,7 @@ func (a *App) registerRoutes(prefix string) {
 
 	// members
 	memberHandler := member.NewHandler(memberSvc)
-	member.RegisterRoutes(a.Router, memberHandler, prefix, authenticated, facultyOnly)
+	member.RegisterRoutes(a.Router, memberHandler, prefix, authenticated)
 
 	// monthly passes
 	monthlyPassRepo := monthlypass.NewRepository(a.DB)
