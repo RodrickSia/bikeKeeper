@@ -36,8 +36,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only admin can create admin users
 	callerRole := auth.GetRole(r.Context())
+	if callerRole != RoleAdmin && callerRole != RoleFaculty {
+		writeError(w, http.StatusForbidden, "only faculty and admin can create users")
+		return
+	}
 	if body.Role == RoleAdmin && callerRole != RoleAdmin {
 		writeError(w, http.StatusForbidden, "only admins can create admin users")
 		return
@@ -85,6 +88,11 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /users/{id}
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	callerRole := auth.GetRole(r.Context())
+	if callerRole != RoleAdmin && callerRole != RoleFaculty {
+		writeError(w, http.StatusForbidden, "only faculty and admin can delete users")
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		writeError(w, http.StatusBadRequest, "id is required")
@@ -100,6 +108,11 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 
 // PUT /users/{id}/status
 func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request) {
+	callerRole := auth.GetRole(r.Context())
+	if callerRole != RoleAdmin && callerRole != RoleFaculty {
+		writeError(w, http.StatusForbidden, "only faculty and admin can update user status")
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		writeError(w, http.StatusBadRequest, "id is required")

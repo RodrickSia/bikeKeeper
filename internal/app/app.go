@@ -81,7 +81,7 @@ func (a *App) registerRoutes(prefix string) {
 
 	// users
 	userHandler := user.NewHandler(userSvc)
-	user.RegisterRoutes(a.Router, userHandler, prefix, authenticated, facultyOnly)
+	user.RegisterRoutes(a.Router, userHandler, prefix, authenticated)
 
 	// parking sessions
 	sessionRepo := parkingsession.NewRepository(a.DB)
