@@ -53,7 +53,11 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) findByPlate(w http.ResponseWriter, r *http.Request) {
 	v, err := h.svc.FindByPlate(r.Context(), r.PathValue("plate"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if v == nil {
+		writeError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 	writeJSON(w, http.StatusOK, v)

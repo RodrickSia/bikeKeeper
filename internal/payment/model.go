@@ -3,8 +3,9 @@ package payment
 import "time"
 
 const (
-	TypeDeposit    = "deposit"
-	TypeParkingFee = "parking_fee"
+	TypeDeposit      = "deposit"
+	TypeParkingFee   = "parking_fee"
+	TypeMonthlyPass  = "monthly_pass"
 
 	MethodCardBalance = "card_balance"
 	MethodCash        = "cash"

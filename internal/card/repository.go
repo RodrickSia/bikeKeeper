@@ -14,6 +14,7 @@ type Repository interface {
 	Create(ctx context.Context, card *Card) error
 	GetByUID(ctx context.Context, cardUID string) (*Card, error)
 	ListByMember(ctx context.Context, memberID string) ([]*Card, error)
+	GetAvailableCasual(ctx context.Context) (*Card, error)
 	Update(ctx context.Context, card *Card) error
 	Delete(ctx context.Context, cardUID string) error
 }
@@ -72,6 +73,24 @@ func (r *repository) ListByMember(ctx context.Context, memberID string) ([]*Card
 		cards = append(cards, card)
 	}
 	return cards, rows.Err()
+}
+
+func (r *repository) GetAvailableCasual(ctx context.Context) (*Card, error) {
+	const query = `
+		SELECT c.card_uid, c.card_type, c.member_id, c.is_inside, c.status, c.balance
+		FROM cards c
+		LEFT JOIN parking_sessions ps ON ps.card_uid = c.card_uid AND ps.status = 'ongoing'
+		WHERE c.card_type = 'casual' AND c.status = 'active' AND ps.id IS NULL
+		LIMIT 1`
+
+	card := &Card{}
+	err := r.db.QueryRowContext(ctx, query).Scan(
+		&card.CardUID, &card.CardType, &card.MemberID, &card.IsInside, &card.Status, &card.Balance,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return card, err
 }
 
 func (r *repository) Update(ctx context.Context, card *Card) error {

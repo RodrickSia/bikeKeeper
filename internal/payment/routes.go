@@ -12,6 +12,7 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, prefix string, mw ...func(ht
 	}
 
 	mux.Handle("POST "+prefix+"/cards/{cardUID}/deposit", wrap(h.deposit))
+	mux.Handle("POST "+prefix+"/cards/{cardUID}/withdraw", wrap(h.withdraw))
 	mux.Handle("GET "+prefix+"/cards/{cardUID}/transactions", wrap(h.listByCard))
 	mux.Handle("GET "+prefix+"/cards/{cardUID}/balance", wrap(h.getBalance))
 }

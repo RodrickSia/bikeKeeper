@@ -38,7 +38,8 @@ INSERT INTO members (student_id, full_name, phone) VALUES
   ('SV20230027', 'Cao Thị Hạnh',     '0901111137'),
   ('SV20230028', 'Tạ Văn Nghĩa',     '0901111138'),
   ('SV20230029', 'Lương Thị Phượng', '0901111139'),
-  ('SV20230030', 'Hà Văn Tiến',      '0901111140')
+  ('SV20230030', 'Hà Văn Tiến',      '0901111140'),
+  ('SV20230031', 'Mock Test User',   '0909999999')
 ON CONFLICT (student_id) DO NOTHING;
 
 -- =============================================================
@@ -107,6 +108,30 @@ SELECT
 FROM users u WHERE u.role IN ('student', 'staff') AND u.email LIKE '%university.edu.vn'
 ON CONFLICT (license_plate) DO NOTHING;
 
+-- Mock vehicle for testing: 99E1-22268
+INSERT INTO vehicles (license_plate, brand, model, color, owner_id, is_active)
+SELECT '99E1-22268', 'Honda', 'Wave', 'Black', u.id, TRUE
+FROM users u
+JOIN members m ON u.member_id = m.id
+WHERE m.student_id = 'SV20230031'
+ON CONFLICT (license_plate) DO NOTHING;
+
+-- Mock swipe input vehicle: 51D3-11111
+INSERT INTO vehicles (license_plate, brand, model, color, owner_id, is_active)
+SELECT '51D3-11111', 'Honda', 'Vision', 'White', u.id, TRUE
+FROM users u
+JOIN members m ON u.member_id = m.id
+WHERE m.student_id = 'SV20230031'
+ON CONFLICT (license_plate) DO NOTHING;
+
+-- Mock swipe output vehicle: 59F1-12345
+INSERT INTO vehicles (license_plate, brand, model, color, owner_id, is_active)
+SELECT '59F1-12345', 'Honda', 'Wave Alpha', 'Blue', u.id, TRUE
+FROM users u
+JOIN members m ON u.member_id = m.id
+WHERE m.student_id = 'SV20230031'
+ON CONFLICT (license_plate) DO NOTHING;
+
 -- =============================================================
 -- 5. CARDS (1-2 per member + casual cards)
 -- =============================================================
@@ -121,6 +146,13 @@ SELECT
   (random() * 500000)::DECIMAL(10,2)
 FROM members m CROSS JOIN (SELECT generate_series(1, 2) AS seq)
 WHERE m.student_id LIKE 'SV2023%'
+ON CONFLICT (card_uid) DO NOTHING;
+
+-- Mock monthly card for SV20230031
+INSERT INTO cards (card_uid, card_type, member_id, status, balance)
+SELECT 'NFC-MOCK-0001', 'monthly', m.id, 'active', 100000.00
+FROM members m
+WHERE m.student_id = 'SV20230031'
 ON CONFLICT (card_uid) DO NOTHING;
 
 -- Casual cards
@@ -428,7 +460,41 @@ FROM support_tickets t
 WHERE t.status IN ('resolved', 'closed');
 
 -- =============================================================
--- 18. UPDATE parking lot occupancy (rough count of ongoing sessions)
+-- 18. MONTHLY PASSES (for some students with active cards)
+-- =============================================================
+DO $$
+DECLARE
+  user_rec RECORD;
+  v_vehicle_id VARCHAR(50);
+  v_plate VARCHAR(20);
+  v_brand VARCHAR(100);
+  v_start DATE;
+  v_end DATE;
+  v_month VARCHAR(7);
+  pass_count INT := 0;
+BEGIN
+  FOR user_rec IN SELECT usr.id, m.student_id FROM users usr JOIN members m ON m.id = usr.member_id WHERE usr.role = 'student' AND usr.status = 'active' LIMIT 10
+  LOOP
+    SELECT license_plate, brand INTO v_plate, v_brand
+    FROM vehicles WHERE owner_id = user_rec.id ORDER BY random() LIMIT 1;
+    IF v_plate IS NULL THEN CONTINUE; END IF;
+
+    v_vehicle_id := 'VEH-' || user_rec.id;
+    v_month := to_char(CURRENT_DATE + (pass_count || ' months')::INTERVAL, 'YYYY-MM');
+    v_start := CURRENT_DATE + (pass_count || ' months')::INTERVAL;
+    v_end := v_start + INTERVAL '1 month' - INTERVAL '1 day';
+
+    INSERT INTO monthly_passes (user_id, vehicle_id, vehicle_plate, vehicle_brand, month, start_date, end_date, price, status, is_auto_renew)
+    VALUES (user_rec.id, v_vehicle_id, v_plate, v_brand, v_month, v_start, v_end, 50000,
+            CASE WHEN pass_count < 7 THEN 'active' ELSE 'expired' END,
+            pass_count % 3 = 0);
+    pass_count := pass_count + 1;
+  END LOOP;
+  RAISE NOTICE 'Created % monthly passes', pass_count;
+END $$;
+
+-- =============================================================
+-- 19. UPDATE parking lot occupancy (rough count of ongoing sessions)
 -- =============================================================
 UPDATE parking_lots SET current_occupancy = (SELECT count(*) FROM parking_sessions WHERE status = 'ongoing');
 
@@ -452,6 +518,7 @@ UNION ALL SELECT 'Device Alerts', count(*) FROM device_alerts
 UNION ALL SELECT 'Notifications', count(*) FROM notifications
 UNION ALL SELECT 'Support Tickets', count(*) FROM support_tickets
 UNION ALL SELECT 'Ticket Responses', count(*) FROM ticket_responses
+UNION ALL SELECT 'Monthly Passes', count(*) FROM monthly_passes
 UNION ALL SELECT 'Incidents', count(*) FROM incidents
 UNION ALL SELECT 'Visitor Passes', count(*) FROM visitor_passes
 ORDER BY entity;

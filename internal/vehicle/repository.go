@@ -43,7 +43,7 @@ func (r *repository) FindByPlate(ctx context.Context, plate string) (*Vehicle, e
 	v := &Vehicle{}
 	err := scanVehicle(r.db.QueryRowContext(ctx, `SELECT `+cols+` FROM vehicles WHERE LOWER(REPLACE(REPLACE(license_plate, '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE($1, '-', ''), ' ', '')) AND is_active=TRUE`, plate), v)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("vehicle not found")
+		return nil, nil
 	}
 	return v, err
 }

@@ -101,6 +101,26 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, session)
 }
 
+// GET /sessions/plate/{plate}
+func (h *Handler) lookupByPlate(w http.ResponseWriter, r *http.Request) {
+	plate := r.PathValue("plate")
+	if plate == "" {
+		writeError(w, http.StatusBadRequest, "plate is required")
+		return
+	}
+
+	session, err := h.svc.LookupByPlate(r.Context(), plate)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to lookup session by plate")
+		return
+	}
+	if session == nil {
+		writeError(w, http.StatusNotFound, "no ongoing session found for this plate")
+		return
+	}
+	writeJSON(w, http.StatusOK, session)
+}
+
 // GET /sessions/card/{cardUID}
 func (h *Handler) listByCard(w http.ResponseWriter, r *http.Request) {
 	cardUID := r.PathValue("cardUID")

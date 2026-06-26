@@ -97,6 +97,20 @@ func (h *Handler) listByMember(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, cards)
 }
 
+// GET /cards/casual-available
+func (h *Handler) getAvailableCasual(w http.ResponseWriter, r *http.Request) {
+	card, err := h.svc.GetAvailableCasual(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to find available casual card")
+		return
+	}
+	if card == nil {
+		writeError(w, http.StatusNotFound, "no available casual card found")
+		return
+	}
+	writeJSON(w, http.StatusOK, card)
+}
+
 // PUT /cards/{cardUID}
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	if !requireFacultyOrAdmin(w, r) {

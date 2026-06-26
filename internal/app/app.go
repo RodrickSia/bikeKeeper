@@ -11,6 +11,7 @@ import (
 	"github.com/RodrickSia/bikeKeeper/internal/device"
 	"github.com/RodrickSia/bikeKeeper/internal/incident"
 	"github.com/RodrickSia/bikeKeeper/internal/member"
+	"github.com/RodrickSia/bikeKeeper/internal/monthlypass"
 	"github.com/RodrickSia/bikeKeeper/internal/notification"
 	"github.com/RodrickSia/bikeKeeper/internal/parkingsession"
 	"github.com/RodrickSia/bikeKeeper/internal/parkinglot"
@@ -96,6 +97,12 @@ func (a *App) registerRoutes(prefix string) {
 	// members
 	memberHandler := member.NewHandler(memberSvc)
 	member.RegisterRoutes(a.Router, memberHandler, prefix, authenticated, facultyOnly)
+
+	// monthly passes
+	monthlyPassRepo := monthlypass.NewRepository(a.DB)
+	monthlyPassSvc := monthlypass.NewService(monthlyPassRepo)
+	monthlyPassHandler := monthlypass.NewHandler(monthlyPassSvc)
+	monthlypass.RegisterRoutes(a.Router, monthlyPassHandler, prefix, authenticated)
 
 	// card requests
 	cardRequestRepo := cardrequest.NewRepository(a.DB)

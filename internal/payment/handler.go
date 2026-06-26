@@ -36,8 +36,8 @@ func (h *Handler) deposit(w http.ResponseWriter, r *http.Request) {
 	// Check ownership
 	claims := auth.GetClaims(r.Context())
 	if claims != nil {
-		isAdminOrFaculty := claims.Role == "faculty" || claims.Role == "admin"
-		if !isAdminOrFaculty {
+		isStaffOrAbove := claims.Role == "staff" || claims.Role == "faculty" || claims.Role == "admin"
+		if !isStaffOrAbove {
 			card, err := h.cards.GetByUID(r.Context(), cardUID)
 			if err != nil {
 				writeError(w, http.StatusNotFound, "card not found")
@@ -68,6 +68,53 @@ func (h *Handler) deposit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, txn)
+}
+
+func (h *Handler) withdraw(w http.ResponseWriter, r *http.Request) {
+	cardUID := r.PathValue("cardUID")
+	if cardUID == "" {
+		writeError(w, http.StatusBadRequest, "cardUID is required")
+		return
+	}
+
+	claims := auth.GetClaims(r.Context())
+	if claims != nil {
+		isStaffOrAbove := claims.Role == "staff" || claims.Role == "faculty" || claims.Role == "admin"
+		if !isStaffOrAbove {
+			card, err := h.cards.GetByUID(r.Context(), cardUID)
+			if err != nil {
+				writeError(w, http.StatusNotFound, "card not found")
+				return
+			}
+			if card.MemberID == nil || *card.MemberID != claims.MemberID {
+				writeError(w, http.StatusForbidden, "forbidden")
+				return
+			}
+		}
+	}
+
+	var body struct {
+		Amount float64 `json:"amount"`
+		Type   string  `json:"type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Amount <= 0 {
+		writeError(w, http.StatusBadRequest, "amount must be positive")
+		return
+	}
+	if body.Type == "" {
+		body.Type = TypeMonthlyPass
+	}
+
+	txn, err := h.svc.Withdraw(r.Context(), cardUID, body.Amount, body.Type)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, txn)
 }
 
 func (h *Handler) listByCard(w http.ResponseWriter, r *http.Request) {

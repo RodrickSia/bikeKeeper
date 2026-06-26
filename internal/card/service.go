@@ -96,6 +96,10 @@ func (s *Service) ToggleInside(ctx context.Context, cardUID string) (*Card, erro
 	return card, nil
 }
 
+func (s *Service) GetAvailableCasual(ctx context.Context) (*Card, error) {
+	return s.repo.GetAvailableCasual(ctx)
+}
+
 func (s *Service) Delete(ctx context.Context, cardUID string) error {
 	return s.repo.Delete(ctx, cardUID)
 }

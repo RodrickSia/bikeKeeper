@@ -15,5 +15,6 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, prefix string, mw ...func(ht
 	mux.Handle("POST "+prefix+"/sessions/{id}/checkout", wrap(h.checkOut))
 	mux.Handle("GET "+prefix+"/sessions/{id}", wrap(h.getByID))
 	mux.Handle("GET "+prefix+"/sessions/card/{cardUID}", wrap(h.listByCard))
+	mux.Handle("GET "+prefix+"/sessions/plate/{plate}", wrap(h.lookupByPlate))
 	mux.Handle("DELETE "+prefix+"/sessions/{id}", wrap(h.delete))
 }

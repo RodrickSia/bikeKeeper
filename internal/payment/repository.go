@@ -8,6 +8,7 @@ import (
 
 type Repository interface {
 	Deposit(ctx context.Context, cardUID string, amount float64) (*Transaction, error)
+	Withdraw(ctx context.Context, cardUID string, amount float64, txType string) (*Transaction, error)
 	ChargeParking(ctx context.Context, cardUID string, fee float64, sessionID int64) (*Transaction, error)
 	ListByCard(ctx context.Context, cardUID string) ([]*Transaction, error)
 	GetBalance(ctx context.Context, cardUID string) (float64, error)
@@ -49,6 +50,51 @@ func (r *repository) Deposit(ctx context.Context, cardUID string, amount float64
 		 VALUES ($1, $2, $3)
 		 RETURNING id, card_uid, amount, type, payment_method, session_id, created_at`,
 		cardUID, amount, TypeDeposit,
+	).Scan(&t.ID, &t.CardUID, &t.Amount, &t.Type, &t.PaymentMethod, &t.SessionID, &t.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("inserting transaction: %w", err)
+	}
+
+	return t, tx.Commit()
+}
+
+func (r *repository) Withdraw(ctx context.Context, cardUID string, amount float64, txType string) (*Transaction, error) {
+	if amount <= 0 {
+		return nil, fmt.Errorf("withdraw amount must be positive")
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var balance float64
+	err = tx.QueryRowContext(ctx,
+		`SELECT balance FROM cards WHERE card_uid = $1 FOR UPDATE`,
+		cardUID,
+	).Scan(&balance)
+	if err != nil {
+		return nil, fmt.Errorf("fetching balance: %w", err)
+	}
+	if balance < amount {
+		return nil, fmt.Errorf("insufficient balance: have %.0f, need %.0f", balance, amount)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`UPDATE cards SET balance = balance - $1 WHERE card_uid = $2`,
+		amount, cardUID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("deducting balance: %w", err)
+	}
+
+	t := &Transaction{}
+	err = tx.QueryRowContext(ctx,
+		`INSERT INTO transactions (card_uid, amount, type)
+		 VALUES ($1, $2, $3)
+		 RETURNING id, card_uid, amount, type, payment_method, session_id, created_at`,
+		cardUID, amount, txType,
 	).Scan(&t.ID, &t.CardUID, &t.Amount, &t.Type, &t.PaymentMethod, &t.SessionID, &t.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("inserting transaction: %w", err)

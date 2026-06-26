@@ -49,6 +49,24 @@ func (s *Service) CheckIn(ctx context.Context, params CheckInParams) (*ParkingSe
 	if err != nil {
 		return nil, fmt.Errorf("recognizing plate: %w", err)
 	}
+
+	// Validate plate for monthly cards
+	isCasual, err := s.repo.IsCasualCard(ctx, params.CardUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking card type: %w", err)
+	}
+	if !isCasual {
+		// Monthly card: validate plate matches a vehicle owned by the card's member
+		vehiclePlate, err := s.repo.GetVehiclePlateByCard(ctx, params.CardUID)
+		if err != nil {
+			return nil, fmt.Errorf("getting vehicle for card: %w", err)
+		}
+		if vehiclePlate == "" || !plateMatches(vehiclePlate, plateIn) {
+			return nil, fmt.Errorf("plate %s does not match registered vehicle %s for this card", plateIn, vehiclePlate)
+		}
+	}
+	// For casual cards: no plate validation during check-in
+
 	session := &ParkingSession{
 		CardUID:         params.CardUID,
 		PlateIn:         &plateIn,
@@ -62,6 +80,24 @@ func (s *Service) CheckIn(ctx context.Context, params CheckInParams) (*ParkingSe
 	}
 
 	return session, nil
+}
+
+func plateMatches(registered, ocr string) bool {
+	// Normalize both plates: remove dashes, spaces, uppercase
+	norm := func(s string) string {
+		result := ""
+		for _, c := range s {
+			if c != '-' && c != ' ' {
+				if c >= 'a' && c <= 'z' {
+					result += string(c - 32)
+				} else {
+					result += string(c)
+				}
+			}
+		}
+		return result
+	}
+	return norm(registered) == norm(ocr)
 }
 
 func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams) error {
@@ -107,6 +143,10 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 
 func (s *Service) GetByID(ctx context.Context, id int64) (*ParkingSession, error) {
 	return s.repo.GetByID(ctx, id)
+}
+
+func (s *Service) LookupByPlate(ctx context.Context, plate string) (*ParkingSession, error) {
+	return s.repo.GetOngoingByPlate(ctx, plate)
 }
 
 func (s *Service) ListByCard(ctx context.Context, cardUID string) ([]*ParkingSession, error) {

@@ -15,9 +15,12 @@ type Repository interface {
 	Create(ctx context.Context, session *ParkingSession) error
 	GetByID(ctx context.Context, id int64) (*ParkingSession, error)
 	GetOngoingSessionByCard(ctx context.Context, cardUID string) (*ParkingSession, error)
+	GetOngoingByPlate(ctx context.Context, plate string) (*ParkingSession, error)
 	ListByCard(ctx context.Context, cardUID string) ([]*ParkingSession, error)
 	CheckOut(ctx context.Context, id int64, session *ParkingSession) error
 	Delete(ctx context.Context, id int64) error
+	GetVehiclePlateByCard(ctx context.Context, cardUID string) (string, error)
+	IsCasualCard(ctx context.Context, cardUID string) (bool, error)
 }
 
 func NewRepository(db *sql.DB) Repository {
@@ -48,6 +51,27 @@ func (r *repository) GetOngoingSessionByCard(ctx context.Context, cardUID string
 
 	session := &ParkingSession{}
 	err := r.db.QueryRowContext(ctx, query, cardUID).Scan(
+		&session.ID, &session.CardUID, &session.PlateIn, &session.ImgPlateInPath, &session.ImgPersonInPath,
+		&session.CheckInTime, &session.PlateOut, &session.ImgPlateOutPath, &session.ImgPersonOutPath,
+		&session.CheckOutTime, &session.Status,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return session, err
+}
+
+func (r *repository) GetOngoingByPlate(ctx context.Context, plate string) (*ParkingSession, error) {
+	const query = `
+		SELECT id, card_uid, plate_in, img_plate_in_path, img_person_in_path,
+		       check_in_time, plate_out, img_plate_out_path, img_person_out_path,
+		       check_out_time, status
+		FROM parking_sessions
+		WHERE REPLACE(plate_in, '-', '') ILIKE REPLACE($1, '-', '') AND status = 'ongoing'
+		LIMIT 1`
+
+	session := &ParkingSession{}
+	err := r.db.QueryRowContext(ctx, query, plate).Scan(
 		&session.ID, &session.CardUID, &session.PlateIn, &session.ImgPlateInPath, &session.ImgPersonInPath,
 		&session.CheckInTime, &session.PlateOut, &session.ImgPlateOutPath, &session.ImgPersonOutPath,
 		&session.CheckOutTime, &session.Status,
@@ -144,5 +168,22 @@ func (r *repository) Delete(ctx context.Context, id int64) error {
 		return fmt.Errorf("parking session %d not found", id)
 	}
 	return nil
+}
+
+func (r *repository) GetVehiclePlateByCard(ctx context.Context, cardUID string) (string, error) {
+	const query = `
+		SELECT v.license_plate 
+		FROM vehicles v 
+		JOIN users u ON v.owner_id = u.id 
+		JOIN members m ON u.member_id = m.id 
+		JOIN cards c ON c.member_id = m.id 
+		WHERE c.card_uid = $1 AND v.is_active = true 
+		LIMIT 1`
+	var plate string
+	err := r.db.QueryRowContext(ctx, query, cardUID).Scan(&plate)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return plate, err
 }
 
