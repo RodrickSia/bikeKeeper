@@ -123,6 +123,15 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 		return fmt.Errorf("recognizing plate: %w", err)
 	}
 
+	// For casual cards: validate that checkout plate matches check-in plate
+	isCasual, err := s.repo.IsCasualCard(ctx, session.CardUID)
+	if err != nil {
+		return fmt.Errorf("checking card type: %w", err)
+	}
+	if isCasual && session.PlateIn != nil && !plateMatches(*session.PlateIn, plateOut) {
+		return fmt.Errorf("plate %s does not match check-in plate %s", plateOut, *session.PlateIn)
+	}
+
 	session.PlateOut = &plateOut
 	session.ImgPlateOutPath = &imgPlateOutPath
 	session.ImgPersonOutPath = &imgPersonOutPath

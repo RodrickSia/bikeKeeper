@@ -32,7 +32,6 @@ type OCRServiceResponse struct {
 }
 
 func (p *PlateProcessor) ExtractPlate(ctx context.Context, imageData []byte) (string, error) {
-	fmt.Printf("[OCR DEBUG] Sending image to OCR service, size: %d bytes, URL: %s\n", len(imageData), p.serviceURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.serviceURL, bytes.NewReader(imageData))
 	if err != nil {
 		return "", fmt.Errorf("creating OCR request: %w", err)
@@ -45,8 +44,6 @@ func (p *PlateProcessor) ExtractPlate(ctx context.Context, imageData []byte) (st
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("[OCR DEBUG] Response status: %d\n", resp.StatusCode)
-
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("OCR service returned status %d: %s", resp.StatusCode, string(body))
@@ -57,10 +54,8 @@ func (p *PlateProcessor) ExtractPlate(ctx context.Context, imageData []byte) (st
 		return "", fmt.Errorf("decoding OCR response: %w", err)
 	}
 
-	plate := ""
 	if len(result.Plates) > 0 {
-		plate = result.Plates[0]
+		return result.Plates[0], nil
 	}
-	fmt.Printf("[OCR DEBUG] Extracted plate: %s\n", plate)
-	return plate, nil
+	return "", nil
 }

@@ -187,3 +187,13 @@ func (r *repository) GetVehiclePlateByCard(ctx context.Context, cardUID string) 
 	return plate, err
 }
 
+func (r *repository) IsCasualCard(ctx context.Context, cardUID string) (bool, error) {
+	const query = `SELECT card_type = 'casual' FROM cards WHERE card_uid = $1`
+	var isCasual bool
+	err := r.db.QueryRowContext(ctx, query, cardUID).Scan(&isCasual)
+	if err == sql.ErrNoRows {
+		return false, fmt.Errorf("card %s not found", cardUID)
+	}
+	return isCasual, err
+}
+
