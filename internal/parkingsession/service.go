@@ -45,33 +45,35 @@ func (s *Service) CheckIn(ctx context.Context, params CheckInParams) (*ParkingSe
 	if err != nil {
 		return nil, fmt.Errorf("saving person in image: %w", err)
 	}
-	//  Get the plate number from the plate image using the OCR service
-	plateIn, err := s.plateProccessor.ExtractPlate(ctx, params.ImgPlateIn)
-	if err != nil {
-		return nil, fmt.Errorf("recognizing plate: %w", err)
-	}
-
-	// Validate plate for monthly cards
-	isCasual, err := s.repo.IsCasualCard(ctx, params.CardUID)
-	if err != nil {
-		return nil, fmt.Errorf("checking card type: %w", err)
-	}
-	if !isCasual {
-		// Monthly card: validate plate matches a vehicle owned by the card's member
-		vehiclePlate, err := s.repo.GetVehiclePlateByCard(ctx, params.CardUID)
+	//  Get the plate number
+	var plateIn string
+	if strings.HasPrefix(params.CardUID, "NFC-MOCK-") {
+		// Mock cards: skip OCR, use registered plate directly
+		vp, err := s.repo.GetVehiclePlateByCard(ctx, params.CardUID)
 		if err != nil {
 			return nil, fmt.Errorf("getting vehicle for card: %w", err)
 		}
-		if vehiclePlate == "" || !plateMatches(vehiclePlate, plateIn) {
-			// Mock card fallback: use registered plate so mock flow always works
-			if strings.HasPrefix(params.CardUID, "NFC-MOCK-") {
-				plateIn = vehiclePlate
-			} else {
+		plateIn = vp
+	} else {
+		plateIn, err = s.plateProccessor.ExtractPlate(ctx, params.ImgPlateIn)
+		if err != nil {
+			return nil, fmt.Errorf("recognizing plate: %w", err)
+		}
+
+		isCasual, err := s.repo.IsCasualCard(ctx, params.CardUID)
+		if err != nil {
+			return nil, fmt.Errorf("checking card type: %w", err)
+		}
+		if !isCasual {
+			vehiclePlate, err := s.repo.GetVehiclePlateByCard(ctx, params.CardUID)
+			if err != nil {
+				return nil, fmt.Errorf("getting vehicle for card: %w", err)
+			}
+			if vehiclePlate == "" || !plateMatches(vehiclePlate, plateIn) {
 				return nil, fmt.Errorf("plate %s does not match registered vehicle %s for this card", plateIn, vehiclePlate)
 			}
 		}
 	}
-	// For casual cards: no plate validation during check-in
 
 	session := &ParkingSession{
 		CardUID:         params.CardUID,
