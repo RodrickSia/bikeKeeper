@@ -124,18 +124,24 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 		return fmt.Errorf("saving person out image: %w", err)
 	}
 
-	plateOut, err := s.plateProccessor.ExtractPlate(ctx, params.ImgPlateOut)
-	if err != nil {
-		return fmt.Errorf("recognizing plate: %w", err)
-	}
+	var plateOut string
+	if strings.HasPrefix(session.CardUID, "NFC-MOCK-") {
+		if session.PlateIn != nil {
+			plateOut = *session.PlateIn
+		}
+	} else {
+		plateOut, err = s.plateProccessor.ExtractPlate(ctx, params.ImgPlateOut)
+		if err != nil {
+			return fmt.Errorf("recognizing plate: %w", err)
+		}
 
-	// For casual cards: validate that checkout plate matches check-in plate
-	isCasual, err := s.repo.IsCasualCard(ctx, session.CardUID)
-	if err != nil {
-		return fmt.Errorf("checking card type: %w", err)
-	}
-	if isCasual && session.PlateIn != nil && !plateMatches(*session.PlateIn, plateOut) {
-		return fmt.Errorf("plate %s does not match check-in plate %s", plateOut, *session.PlateIn)
+		isCasual, err := s.repo.IsCasualCard(ctx, session.CardUID)
+		if err != nil {
+			return fmt.Errorf("checking card type: %w", err)
+		}
+		if isCasual && session.PlateIn != nil && !plateMatches(*session.PlateIn, plateOut) {
+			return fmt.Errorf("plate %s does not match check-in plate %s", plateOut, *session.PlateIn)
+		}
 	}
 
 	session.PlateOut = &plateOut
@@ -143,7 +149,7 @@ func (s *Service) CheckOut(ctx context.Context, id int64, params CheckOutParams)
 	session.ImgPersonOutPath = &imgPersonOutPath
 
 	const parkingFee = 5000.0
-	if s.payment != nil {
+	if s.payment != nil && !strings.HasPrefix(session.CardUID, "NFC-MOCK-") {
 		if err := s.payment.ChargeParking(ctx, session.CardUID, parkingFee, id); err != nil {
 			return fmt.Errorf("charging parking fee: %w", err)
 		}
